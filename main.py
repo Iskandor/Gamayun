@@ -10,37 +10,31 @@ import torch
 from torch import multiprocessing
 from torch.multiprocessing import Pool
 
-import PPO_Caveflyer
-import PPO_Climber
-import PPO_Coinrun
-import PPO_Gravitar
-import PPO_Jumper
-import PPO_Montezuma
-import PPO_Pitfall
-import PPO_PrivateEye
-import PPO_Solaris
-import PPO_Venture
+import PPO_HardAtariGame
+import PPO_ProcgenGame
+
 from config import load_config_file
 from config.Config import Config
 
 envs = {
     'ppo': {
-        'gravitar': PPO_Gravitar,
-        'montezuma': PPO_Montezuma,
-        'pitfall': PPO_Pitfall,
-        'private_eye': PPO_PrivateEye,
-        'solaris': PPO_Solaris,
-        'venture': PPO_Venture,
-        'caveflyer': PPO_Caveflyer,
-        'coinrun': PPO_Coinrun,
-        'climber': PPO_Climber,
-        'jumper': PPO_Jumper,
+        'gravitar': {'name': 'GravitarNoFrameskip-v4', 'class': PPO_HardAtariGame},
+        'montezuma': {'name': 'MontezumaRevengeNoFrameskip-v4', 'class': PPO_HardAtariGame},
+        'pitfall': {'name': 'PitfallNoFrameskip-v4', 'class': PPO_HardAtariGame},
+        'private_eye': {'name': 'PrivateEyeNoFrameskip-v4', 'class': PPO_HardAtariGame},
+        'solaris': {'name': 'SolarisNoFrameskip-v4', 'class': PPO_HardAtariGame},
+        'venture': {'name': 'VentureNoFrameskip-v4', 'class': PPO_HardAtariGame},
+        'adventure': {'name': 'Adventure-v4', 'class': PPO_HardAtariGame},
+        'caveflyer': {'name': 'procgen-caveflyer-v0', 'class': PPO_ProcgenGame},
+        'coinrun': {'name': 'procgen-coinrun-v0', 'class': PPO_ProcgenGame},
+        'climber': {'name': 'procgen-climber-v0', 'class': PPO_ProcgenGame},
+        'jumper': {'name': 'procgen-jumper-v0', 'class': PPO_ProcgenGame},
     },
 }
 
 
 def run_ray_parallel(args, experiment):
-    @ray.remote(num_gpus=1/args.num_processes, max_calls=1)
+    @ray.remote(num_gpus=1 / args.num_processes, max_calls=1)
     def run_thread_ray(p_thread_params):
         run_thread(p_thread_params)
 
@@ -66,18 +60,20 @@ def run_thread(thread_params):
 def run(id, algorithm, env, experiment):
     print('Starting experiment {0}_{1} on env {2} learning algorithm {3} model {4} {5}'.format(experiment.name, id + experiment.shift, env, algorithm, experiment.model, experiment.type if hasattr(experiment, 'type') else ''))
 
-    env_class = envs[algorithm][env]
+    env_name = envs[algorithm][env]['name']
+    env_class = envs[algorithm][env]['class']
 
     if experiment.model == 'baseline':
-        env_class.run_baseline(experiment, id)
+        env_class.run_baseline(experiment, id, env_name)
     if experiment.model == 'rnd':
-        env_class.run_rnd_model(experiment, id)
+        env_class.run_rnd_model(experiment, id, env_name)
     if experiment.model == 'snd':
-        env_class.run_snd_model(experiment, id)
+        env_class.run_snd_model(experiment, id, env_name)
     if experiment.model == 'icm':
-        env_class.run_icm_model(experiment, id)
+        env_class.run_icm_model(experiment, id, env_name)
     if experiment.model == 'sp':
-        env_class.run_sp_model(experiment, id)
+        env_class.run_sp_model(experiment, id, env_name)
+
 
 def write_command_file(args, experiment):
     print(multiprocessing.cpu_count())

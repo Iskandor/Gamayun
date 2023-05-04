@@ -16,7 +16,7 @@ def encode_state(state):
 
 
 def test(config, path, env_name):
-    env = WrapperHardAtari(gym.make(env_name, render_mode='human'))
+    env = WrapperHardAtari(env_name, render_mode='human')
     input_shape = env.observation_space.shape
     action_dim = env.action_space.n
 
@@ -32,7 +32,7 @@ def test(config, path, env_name):
 
 def run_baseline(config, trial, env_name):
     print('Creating {0:d} environments'.format(config.n_env))
-    env = MultiEnvParallel([WrapperHardAtari(gym.make(env_name)) for _ in range(config.n_env)], config.n_env, config.num_threads)
+    env = MultiEnvParallel([WrapperHardAtari(env_name) for _ in range(config.n_env)], config.n_env, config.num_threads)
 
     input_shape = env.observation_space.shape
     action_dim = env.action_space.n
@@ -49,7 +49,7 @@ def run_baseline(config, trial, env_name):
 
 def run_rnd_model(config, trial, env_name):
     print('Creating {0:d} environments'.format(config.n_env))
-    env = MultiEnvParallel([WrapperHardAtari(gym.make(env_name)) for _ in range(config.n_env)], config.n_env, config.num_threads)
+    env = MultiEnvParallel([WrapperHardAtari(env_name) for _ in range(config.n_env)], config.n_env, config.num_threads)
 
     input_shape = env.observation_space.shape
     action_dim = env.action_space.n
@@ -66,7 +66,7 @@ def run_rnd_model(config, trial, env_name):
 
 def run_snd_model(config, trial, env_name):
     print('Creating {0:d} environments'.format(config.n_env))
-    env = MultiEnvParallel([WrapperHardAtari(gym.make(env_name)) for _ in range(config.n_env)], config.n_env, config.num_threads)
+    env = MultiEnvParallel([WrapperHardAtari(env_name) for _ in range(config.n_env)], config.n_env, config.num_threads)
 
     input_shape = env.observation_space.shape
     action_dim = env.action_space.n
@@ -83,7 +83,7 @@ def run_snd_model(config, trial, env_name):
 
 def run_sp_model(config, trial, env_name):
     print('Creating {0:d} environments'.format(config.n_env))
-    env = MultiEnvParallel([WrapperHardAtari(gym.make(env_name)) for _ in range(config.n_env)], config.n_env, config.num_threads)
+    env = MultiEnvParallel([WrapperHardAtari(env_name) for _ in range(config.n_env)], config.n_env, config.num_threads)
 
     input_shape = env.observation_space.shape
     action_dim = env.action_space.n
@@ -100,7 +100,7 @@ def run_sp_model(config, trial, env_name):
 
 def run_icm_model(config, trial, env_name):
     print('Creating {0:d} environments'.format(config.n_env))
-    env = MultiEnvParallel([WrapperHardAtari(gym.make(env_name)) for _ in range(config.n_env)], config.n_env, config.num_threads)
+    env = MultiEnvParallel([WrapperHardAtari(env_name) for _ in range(config.n_env)], config.n_env, config.num_threads)
 
     input_shape = env.observation_space.shape
     action_dim = env.action_space.n

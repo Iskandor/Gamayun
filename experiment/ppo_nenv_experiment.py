@@ -61,7 +61,7 @@ class ExperimentNEnvPPO:
 
         s = numpy.zeros((n_env,) + self._env.observation_space.shape, dtype=numpy.float32)
         for i in range(n_env):
-            s[i] = self._env.reset(i)
+            s[i], metadata = self._env.reset(i)
 
         state0 = self.process_state(s)
 
@@ -69,7 +69,7 @@ class ExperimentNEnvPPO:
             with torch.no_grad():
                 value, action0, probs0 = agent.get_action(state0)
 
-            next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
+            next_state, reward, done, trunc, info = self._env.step(agent.convert_action(action0.cpu()))
 
             reward = torch.tensor(reward, dtype=torch.float32)
             if info is not None:
@@ -96,7 +96,7 @@ class ExperimentNEnvPPO:
                     trial, step_counter.steps, step_counter.limit, stats['re'].sum[i], int(stats['re'].step[i]), reward_avg.value().item(), stats['score'].sum[i]))
                 print(time_estimator)
 
-                next_state[i] = self._env.reset(index)
+                next_state[i], metadata = self._env.reset(index)
 
             analytic.end_step()
             state1 = self.process_state(next_state)
@@ -129,7 +129,7 @@ class ExperimentNEnvPPO:
 
         s = numpy.zeros((n_env,) + self._env.observation_space.shape, dtype=numpy.float32)
         for i in range(n_env):
-            s[i] = self._env.reset(i)
+            s[i], metadata = self._env.reset(i)
 
         state0 = self.process_state(s)
 
@@ -137,7 +137,7 @@ class ExperimentNEnvPPO:
             agent.motivation.update_state_average(state0)
             with torch.no_grad():
                 value, action0, probs0 = agent.get_action(state0)
-            next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
+            next_state, reward, done, trunc, info = self._env.step(agent.convert_action(action0.cpu()))
 
             ext_reward = torch.tensor(reward, dtype=torch.float32)
             int_reward = agent.motivation.reward(state0).cpu().clip(0.0, 1.0)
@@ -171,7 +171,7 @@ class ExperimentNEnvPPO:
                     stats['ri'].std[i],
                     int(stats['re'].step[i]), reward_avg.value().item(), stats['score'].sum[i]))
                 print(time_estimator)
-                next_state[i] = self._env.reset(index)
+                next_state[i], metadata = self._env.reset(index)
 
             state1 = self.process_state(next_state)
 
@@ -206,7 +206,7 @@ class ExperimentNEnvPPO:
 
         s = numpy.zeros((n_env,) + self._env.observation_space.shape, dtype=numpy.float32)
         for i in range(n_env):
-            s[i] = self._env.reset(i)
+            s[i], metadata = self._env.reset(i)
 
         state0 = self.process_state(s)
 
@@ -214,7 +214,7 @@ class ExperimentNEnvPPO:
             agent.motivation.update_state_average(state0)
             with torch.no_grad():
                 features, value, action0, probs0 = agent.get_action(state0)
-            next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
+            next_state, reward, done, trunc, info = self._env.step(agent.convert_action(action0.cpu()))
 
             ext_reward = torch.tensor(reward, dtype=torch.float32)
             int_reward = agent.motivation.reward(state0).cpu().clip(0.0, 1.0)
@@ -253,7 +253,7 @@ class ExperimentNEnvPPO:
                         int(stats['re'].step[i]), reward_avg.value().item(), stats['score'].sum[i], stats['feature_space'].max[i], stats['feature_space'].mean[i],
                         stats['feature_space'].std[i]))
                 print(time_estimator)
-                next_state[i] = self._env.reset(index)
+                next_state[i], metadata = self._env.reset(index)
 
             state1 = self.process_state(next_state)
 
@@ -288,14 +288,14 @@ class ExperimentNEnvPPO:
 
         s = numpy.zeros((n_env,) + self._env.observation_space.shape, dtype=numpy.float32)
         for i in range(n_env):
-            s[i] = self._env.reset(i)
+            s[i], metadata = self._env.reset(i)
 
         state0 = self.process_state(s)
 
         while step_counter.running():
             with torch.no_grad():
                 value, action0, probs0 = agent.get_action(state0)
-            next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
+            next_state, reward, done, trunc, info = self._env.step(agent.convert_action(action0.cpu()))
 
             ext_reward = torch.tensor(reward, dtype=torch.float32)
             int_reward = agent.motivation.reward(state0, action0, self.process_state(next_state)).cpu().clip(0.0, 1.0)
@@ -322,7 +322,7 @@ class ExperimentNEnvPPO:
                     stats['ri'].std[i],
                     int(stats['re'].step[i]), reward_avg.value().item(), stats['score'].sum[i]))
                 print(time_estimator)
-                next_state[i] = self._env.reset(index)
+                next_state[i], metadata = self._env.reset(index)
 
             state1 = self.process_state(next_state)
 
@@ -364,14 +364,14 @@ class ExperimentNEnvPPO:
 
         s = numpy.zeros((n_env,) + self._env.observation_space.shape, dtype=numpy.float32)
         for i in range(n_env):
-            s[i] = self._env.reset(i)
+            s[i], metadata = self._env.reset(i)
 
         state0 = self.process_state(s)
 
         while step_counter.running():
             with torch.no_grad():
                 features, value, action0, probs0 = agent.get_action(state0)
-            next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
+            next_state, reward, done, trunc, info = self._env.step(agent.convert_action(action0.cpu()))
 
             ext_reward = torch.tensor(reward, dtype=torch.float32)
             int_reward = agent.motivation.reward(state0, action0, self.process_state(next_state)).cpu().clip(0.0, 1.0)
@@ -399,7 +399,7 @@ class ExperimentNEnvPPO:
                         stats['ri'].std[i], int(stats['re'].step[i]), reward_avg.value().item(), stats['score'].sum[i],
                         stats['feature_space'].max[i], stats['feature_space'].mean[i], stats['feature_space'].std[i]))
                 print(time_estimator)
-                next_state[i] = self._env.reset(index)
+                next_state[i], metadata = self._env.reset(index)
 
             state1 = self.process_state(next_state)
 

@@ -14,18 +14,18 @@ class NopOpsEnv(gym.Wrapper):
         noops = numpy.random.randint(1, self.max_count + 1)
 
         for _ in range(noops):
-            obs, _, done, _ = self.env.step(0)
+            obs, _, done, _, _ = self.env.step(0)
 
             if done:
                 self.env.reset()
-                obs, _, _, _ = self.env.step(1)
-                obs, _, _, _ = self.env.step(2)
+                obs, _, _, _, _ = self.env.step(1)
+                obs, _, _, _, _ = self.env.step(2)
 
         return obs
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
-        return obs, reward, done, info
+        obs, reward, done, trunc, info = self.env.step(action)
+        return obs, reward, done, trunc, info
 
 
 class MaxAndSkipEnv(gym.Wrapper):
@@ -39,7 +39,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         total_reward = 0.0
         done = None
         for i in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
+            obs, reward, done, trunc, info = self.env.step(action)
             if i == self._skip - 2: self._obs_buffer[0] = obs
             if i == self._skip - 1: self._obs_buffer[1] = obs
             total_reward += reward
@@ -47,7 +47,7 @@ class MaxAndSkipEnv(gym.Wrapper):
                 break
 
         max_frame = self._obs_buffer.max(axis=0)
-        return max_frame, total_reward, done, info
+        return max_frame, total_reward, done, trunc, info
 
 
 class ResizeEnv(gym.ObservationWrapper):
@@ -82,11 +82,11 @@ class FireResetEnv(gym.Wrapper):
     def reset(self):
         self.env.reset()
 
-        obs, _, done, _ = self.env.step(1)
+        obs, _, done, _, _ = self.env.step(1)
         if done:
             self.env.reset()
 
-        obs, _, done, _ = self.env.step(2)
+        obs, _, done, _, _ = self.env.step(2)
         if done:
             self.env.reset()
 
@@ -108,7 +108,7 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.dense_rewards = dense_rewards
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, done, trunc, info = self.env.step(action)
         info['raw_score'] = reward
         self.was_real_done = done
 
@@ -135,15 +135,15 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.lives = lives
 
         reward = numpy.clip(self.reward_scale * reward, -1.0, 1.0)
-        return obs, reward, done, info
+        return obs, reward, done, trunc, info
 
     def reset(self, **kwargs):
         if self.was_real_done:
             obs = self.env.reset(**kwargs)
         else:
-            obs, _, _, _ = self.env.step(1)
-            obs, _, _, _ = self.env.step(2)
-            obs, _, _, _ = self.env.step(0)
+            obs, _, _, _, _ = self.env.step(1)
+            obs, _, _, _, _ = self.env.step(2)
+            obs, _, _, _, _ = self.env.step(0)
 
         self.lives = self.env.unwrapped.ale.lives()
         self.inital_lives = self.env.unwrapped.ale.lives()
@@ -179,7 +179,7 @@ class RepeatActionEnv(gym.Wrapper):
     def step(self, action):
         reward, done = 0, False
         for t in range(4):
-            state, r, done, info = self.env.step(action)
+            state, r, done, trunc, info = self.env.step(action)
             if t == 2:
                 self.successive_frame[0] = state
             elif t == 3:
@@ -189,7 +189,7 @@ class RepeatActionEnv(gym.Wrapper):
                 break
 
         state = self.successive_frame.max(axis=0)
-        return state, reward, done, info
+        return state, reward, done, trunc, info
 
 
 class RawScoreEnv(gym.Wrapper):
@@ -205,7 +205,7 @@ class RawScoreEnv(gym.Wrapper):
         self.raw_score_total = 0.0
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, done, trunc, info = self.env.step(action)
         info['raw_score'] = reward
 
         self.steps += 1
@@ -225,7 +225,7 @@ class RawScoreEnv(gym.Wrapper):
 
         reward = max(0., float(numpy.sign(reward)))
 
-        return obs, reward, done, info
+        return obs, reward, done, trunc, info
 
     def reset(self):
         self.steps = 0
@@ -242,7 +242,8 @@ def WrapperAtari(env, height=96, width=96, frame_stacking=4, frame_skipping=4, r
     return env
 
 
-def WrapperHardAtari(env, height=96, width=96, frame_stacking=4, max_steps=4500):
+def WrapperHardAtari(env_name, render_mode=None, height=96, width=96, frame_stacking=4, max_steps=4500):
+    env = gym.make(env_name, render_mode=render_mode)
     env = StickyActionEnv(env)
     env = RepeatActionEnv(env)
     env = ResizeEnv(env, height, width, frame_stacking)

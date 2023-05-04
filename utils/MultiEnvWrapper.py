@@ -24,6 +24,7 @@ class MultiEnvParallel:
         # a = [None] * n_env
         self.rewards = numpy.zeros((envs_count, 1), dtype=numpy.float32)
         self.dones = numpy.zeros((envs_count, 1), dtype=numpy.float32)
+        self.truncs = numpy.zeros((envs_count, 1), dtype=numpy.float32)
         self.infos = [None] * envs_count
 
         print("MultiEnvParallel")
@@ -44,11 +45,12 @@ class MultiEnvParallel:
 
     def _step(self, param):
         index, action = param
-        obs, reward, done, info = self.envs_list[index].step(action)
+        obs, reward, done, trunc, info = self.envs_list[index].step(action)
 
         self.observations[index] = obs
         self.rewards[index] = reward
         self.dones[index] = done
+        self.truncs[index] = trunc
         self.infos[index] = info
 
     def step(self, actions):
@@ -59,6 +61,7 @@ class MultiEnvParallel:
         obs = self.observations
         reward = self.rewards
         done = self.dones
+        trunc = self.truncs
         info = {}
         for i in self.infos:
             if i is not None:
@@ -70,6 +73,6 @@ class MultiEnvParallel:
         for k in info:
             info[k] = numpy.stack(info[k])
 
-        return obs, reward, done, info
+        return obs, reward, done, trunc, info
 
 
