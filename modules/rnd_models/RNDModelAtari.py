@@ -311,7 +311,7 @@ class SNDVModelAtari(nn.Module):
     def error(self, state):
         with torch.no_grad():
             prediction, target = self(state)
-            error = ((target - prediction)**2).mean(dim=1, keepdim=True)
+            error = ((target - prediction) ** 2).mean(dim=1, keepdim=True)
 
         return error
 
@@ -361,6 +361,7 @@ class SNDVModelAtari(nn.Module):
 
     def update_state_average(self, state):
         self.state_average.update(state)
+
 
 class BarlowTwinsModelAtari(nn.Module):
     def __init__(self, input_shape, action_dim, config):
@@ -571,3 +572,39 @@ class VINVModelAtari(VICRegModelAtari):
         analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), inv_accuracy=accuracy.unsqueeze(-1).detach())
 
         return loss_prediction + loss_target + loss_inv
+
+
+class TPModelAtari(VICRegModelAtari):
+    def __init__(self, input_shape, action_dim, config):
+        super(TPModelAtari, self).__init__(input_shape, action_dim, config)
+
+        self.terminal_model = nn.Sequential(
+            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.ReLU(),
+            nn.Linear(self.feature_dim, self.feature_dim // 2),
+            nn.ReLU(),
+            nn.Linear(self.feature_dim // 2, 2)
+        )
+
+        gain = sqrt(2)
+        init_orthogonal(self.terminal_model[0], gain)
+        init_orthogonal(self.terminal_model[2], gain)
+        init_orthogonal(self.terminal_model[4], gain)
+
+    def loss_function(self, state, next_state, done):
+        prediction, target = self(state)
+        next_target = self.target_model(self.preprocess(next_state))
+        done_logits = self.terminal_model(next_target)
+
+        done_predicted = torch.argmax(torch.softmax(done_logits, dim=1), dim=1, keepdim=True)
+        accuracy = (done_predicted == done).float().mean() * 100
+
+        iota = 1.0
+        loss_terminal = nn.functional.cross_entropy(done_logits, done.flatten().long()) * iota
+        loss_prediction = nn.functional.mse_loss(prediction, target.detach(), reduction='mean')
+        loss_target = self.target_model.loss_function(self.preprocess(state), self.preprocess(next_state))
+
+        analytic = ResultCollector()
+        analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), term_accuracy=accuracy.unsqueeze(-1).detach())
+
+        return loss_prediction + loss_target + loss_terminal

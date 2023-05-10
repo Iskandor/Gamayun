@@ -38,7 +38,12 @@ class MultiEnvParallel:
             self.envs_list[i].close()
 
     def reset(self, env_id):
-        return self.envs_list[env_id].reset()
+        result = self.envs_list[env_id].reset()
+
+        if not isinstance(result, tuple):
+            result = (result, None)
+
+        return result
 
     def render(self, env_id):
         pass

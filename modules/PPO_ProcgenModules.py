@@ -5,7 +5,7 @@ import torch.nn as nn
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
 from modules.forward_models.ForwardModelProcgen import SPModelProcgen, ICMModelProcgen
-from modules.rnd_models.RNDModelProcgen import VICRegModelProcgen, RNDModelProcgen, STDModelProcgen, BarlowTwinsModelProcgen, SNDVModelProcgen, VINVModelProcgen
+from modules.rnd_models.RNDModelProcgen import VICRegModelProcgen, RNDModelProcgen, STDModelProcgen, BarlowTwinsModelProcgen, SNDVModelProcgen, VINVModelProcgen, TPModelProcgen
 
 
 class PPOProcgenNetwork(torch.nn.Module):
@@ -117,3 +117,5 @@ class PPOProcgenNetworkSND(PPOProcgenMotivationNetwork):
             self.cnd_model = SNDVModelProcgen(input_shape, action_dim, config)
         if config.type == 'vinv':
             self.cnd_model = VINVModelProcgen(input_shape, action_dim, config)
+        if config.type == 'tp':
+            self.cnd_model = TPModelProcgen(input_shape, action_dim, config)

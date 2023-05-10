@@ -12,6 +12,8 @@ class SNDMotivationFactory:
             result = SNDVMotivation(network, lr, eta, device)
         elif type == 'vinv':
             result = SINVMotivation(network, lr, eta, device)
+        elif type == 'tp':
+            result = TPMotivation(network, lr, eta, device)
         else:
             result = SNDMotivation(network, lr, eta, device)
 
@@ -102,3 +104,23 @@ class SINVMotivation(SNDMotivation):
 
             end = time.time()
             print("SINV motivation training time {0:.2f}s".format(end - start))
+
+
+class TPMotivation(SNDMotivation):
+    def train(self, memory, indices):
+        if indices:
+            start = time.time()
+            sample, size = memory.sample_batches(indices)
+
+            for i in range(size):
+                states = sample.state[i].to(self._device)
+                next_states = sample.next_state[i].to(self._device)
+                dones = sample.done[i].to(self._device)
+
+                self._optimizer.zero_grad()
+                loss = self._network.loss_function(states, next_states, dones)
+                loss.backward()
+                self._optimizer.step()
+
+            end = time.time()
+            print("TP motivation training time {0:.2f}s".format(end - start))

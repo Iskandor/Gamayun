@@ -89,7 +89,7 @@ class PPOAtariSNDAgent(PPOAgent):
 
     def train(self, state0, value, action0, probs0, state1, reward, mask):
         self.memory.add(state=state0.cpu(), value=value.cpu(), action=action0.cpu(), prob=probs0.cpu(), reward=reward.cpu(), mask=mask.cpu())
-        self.motivation_memory.add(state=state0.cpu(), next_state=state1.cpu(), action=action0.cpu())
+        self.motivation_memory.add(state=state0.cpu(), next_state=state1.cpu(), action=action0.cpu(), done=mask.cpu())
 
         indices = self.memory.indices()
         motivation_indices = self.motivation_memory.indices()
