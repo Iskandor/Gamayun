@@ -73,6 +73,8 @@ def run(id, algorithm, env, experiment):
         env_class.run_icm_model(experiment, id, env_name)
     if experiment.model == 'sp':
         env_class.run_sp_model(experiment, id, env_name)
+    if experiment.model == 'aspd':
+        env_class.run_aspd_model(experiment, id, env_name)
 
 
 def write_command_file(args, experiment):

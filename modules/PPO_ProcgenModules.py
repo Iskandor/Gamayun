@@ -5,7 +5,7 @@ import torch.nn as nn
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
 from modules.forward_models.ForwardModelProcgen import SPModelProcgen, ICMModelProcgen
-from modules.rnd_models.RNDModelProcgen import VICRegModelProcgen, RNDModelProcgen, STDModelProcgen, BarlowTwinsModelProcgen, SNDVModelProcgen, VINVModelProcgen, TPModelProcgen
+from modules.novelty_models.RNDModelProcgen import VICRegModelProcgen, RNDModelProcgen, STDModelProcgen, BarlowTwinsModelProcgen, SNDVModelProcgen, VINVModelProcgen, TPModelProcgen
 
 
 class PPOProcgenNetwork(torch.nn.Module):

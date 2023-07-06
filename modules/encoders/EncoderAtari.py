@@ -11,7 +11,41 @@ from torchvision import transforms
 from modules import init_orthogonal
 
 
-class ST_DIM_CNN(nn.Module):
+class AtariStateEncoderSmall(nn.Module):
+
+    def __init__(self, input_shape, feature_dim, gain=sqrt(2)):
+        super().__init__()
+        self.feature_size = feature_dim
+        self.hidden_size = self.feature_size
+
+        self.input_channels = input_shape[0]
+        self.input_height = input_shape[1]
+        self.input_width = input_shape[2]
+
+        self.final_conv_size = 64 * (self.input_width // 8) * (self.input_height // 8)
+        self.main = nn.Sequential(
+            nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(self.final_conv_size, feature_dim)
+        )
+
+        # gain = nn.init.calculate_gain('relu')
+        init_orthogonal(self.main[0], gain)
+        init_orthogonal(self.main[2], gain)
+        init_orthogonal(self.main[4], gain)
+        init_orthogonal(self.main[7], gain)
+
+    def forward(self, inputs):
+        out = self.main(inputs)
+        return out
+
+
+class AtariStateEncoder(nn.Module):
 
     def __init__(self, input_shape, feature_dim):
         super().__init__()
@@ -67,7 +101,7 @@ class ST_DIMEncoderAtari(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
 
-        self.encoder = ST_DIM_CNN(input_shape, feature_dim)
+        self.encoder = AtariStateEncoder(input_shape, feature_dim)
         self.classifier1 = nn.Linear(self.encoder.hidden_size, self.encoder.local_layer_depth)  # x1 = global, x2=patch, n_channels = 32
         self.classifier2 = nn.Linear(self.encoder.local_layer_depth, self.encoder.local_layer_depth)
 
@@ -274,7 +308,7 @@ class BarlowTwinsEncoderAtari(nn.Module):
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
 
-        self.encoder = ST_DIM_CNN(input_shape, feature_dim)
+        self.encoder = AtariStateEncoder(input_shape, feature_dim)
         self.lam = 5e-3
 
         self.lam_mask = torch.maximum(torch.ones(self.feature_dim, self.feature_dim, device=self.config.device) * self.lam, torch.eye(self.feature_dim, self.feature_dim, device=self.config.device))
@@ -326,7 +360,7 @@ class VICRegEncoderAtari(nn.Module):
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
 
-        self.encoder = ST_DIM_CNN(input_shape, feature_dim)
+        self.encoder = AtariStateEncoderSmall(input_shape, feature_dim)
 
     def forward(self, state):
         return self.encoder(state)

@@ -51,7 +51,7 @@ class RNDMotivation:
         self.reward_stats.update(reward.to(self._device))
 
 
-class QRNDMotivation:
+class ASPDMotivation:
     def __init__(self, network, lr, eta=1, device='cpu'):
         self._network = network
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
@@ -66,14 +66,15 @@ class QRNDMotivation:
             for i in range(size):
                 states = sample.state[i].to(self._device)
                 actions = sample.action[i].to(self._device)
+                next_states = sample.next_state[i].to(self._device)
 
                 self._optimizer.zero_grad()
-                loss = self._network.loss_function(states, actions)
+                loss = self._network.loss_function(states, actions, next_states)
                 loss.backward()
                 self._optimizer.step()
 
             end = time.time()
-            print("QRND motivation training time {0:.2f}s".format(end - start))
+            print("ASPD motivation training time {0:.2f}s".format(end - start))
 
     def error(self, state0, action0):
         return self._network.error(state0, action0)
@@ -84,10 +85,8 @@ class QRNDMotivation:
         states = sample.state.to(self._device)
         actions = sample.action.to(self._device)
 
-        return self.reward(self.error(states, actions))
+        return self.reward(states, actions)
 
-    def reward(self, error):
-        return error * self._eta
-
-    def update_state_average(self, state, action):
-        self._network.update_state_average(state, action)
+    def reward(self, state0, action0):
+        error = self.error(state0, action0)
+        return error, error * self._eta

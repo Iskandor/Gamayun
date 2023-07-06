@@ -29,10 +29,10 @@ class StateWrapper(gym.Wrapper):
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=state_shape, dtype=numpy.float32)
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, done, trunc, info = self.env.step(action)
         obs = self._get_state(obs)
 
-        return obs, reward, done, info
+        return obs, reward, done, trunc, info
 
     def reset(self):
         s = self.env.reset()
@@ -60,10 +60,10 @@ class FrameStacking(gym.Wrapper):
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=state_shape, dtype=numpy.float32)
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, done, trunc, info = self.env.step(action)
         obs = self._get_state(obs)
 
-        return obs, reward, done, info
+        return obs, reward, done, trunc, info
 
     def reset(self):
         self.state[:, :, :] = 0.0
@@ -95,7 +95,7 @@ class ScoreWrapper(gym.Wrapper):
         self.ptr = 0
 
     def step(self, action):
-        state, reward, done, info = self.env.step(action)
+        state, reward, done, trunc, info = self.env.step(action)
 
         self.reward_sum += reward
 
@@ -110,7 +110,7 @@ class ScoreWrapper(gym.Wrapper):
         info["raw_score"] = round(self.score_raw.mean(), 5)
         info["normalised_score"] = round(self.score_normalised.mean(), 5)
 
-        return state, reward, done, info
+        return state, reward, done, trunc, info
 
     def reset(self):
         self.reward_sum = 0.0
