@@ -49,10 +49,10 @@ def run_ray_parallel(args, experiment):
 
 
 def run_thread(thread_params):
-    algorithm, env, experiment, i = thread_params
+    algorithm, env, experiment, i, gpu = thread_params
 
-    if experiment.gpus:
-        torch.cuda.set_device(experiment.gpus[0])
+    if experiment.device == 'cuda':
+        torch.cuda.set_device(gpu)
 
     run(i, algorithm, env, experiment)
 
@@ -110,26 +110,41 @@ def run_command_file():
 def run_torch_parallel(args, experiment):
     multiprocessing.set_start_method('spawn')
 
-    thread_params = []
-    for i in range(experiment.trials):
-        thread_params.append((args.algorithm, args.env, experiment, i))
+    # for CPU
+    gpu = -1
+    total_experiment_segments = 1
+    runs_per_segment = experiment.trials
 
-    with Pool(args.num_processes) as p:
-        p.map(run_thread, thread_params)
+    if args.device == 'cuda':
+        total_gpus = len(args.gpus)
+        if torch.cuda.device_count() < total_gpus:
+            print("Warning: detected less devices than set in arguments, the number will be adjusted to available devices")
+            total_gpus = torch.cuda.device_count()
+
+        if experiment.trials > (total_gpus * args.runs_per_gpu):
+            total_experiment_segments = math.ceil(experiment.trials / args.runs_per_gpu)
+            runs_per_segment = args.runs_per_gpu
+        else:
+            runs_per_segment = experiment.trials
+
+    for n in range(total_experiment_segments):
+        thread_params = []
+        for i in range(n * runs_per_segment, min((n+1) * runs_per_segment, experiment.trials)):
+            if total_gpus > 0:
+                gpu = args.gpus[i % total_gpus]
+            thread_params.append((args.algorithm, args.env, experiment, i, gpu))
+
+        with Pool(experiment.trials) as p:
+            p.map(run_thread, thread_params)
 
 
 def update_config(args, experiment):
     experiment.device = args.device
-    experiment.gpus = args.gpus
     experiment.shift = args.shift
     if args.num_threads == 0:
         experiment.num_threads = psutil.cpu_count(logical=True)
     else:
         experiment.num_threads = args.num_threads
-    # if args.algorithm == 'ppo':
-    #     experiment.steps *= experiment.n_env
-    #     experiment.batch_size *= experiment.n_env
-    #     experiment.trajectory_size *= experiment.n_env
 
 
 if __name__ == '__main__':
@@ -156,8 +171,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--shift', type=int, help='shift result id', default=0)
     parser.add_argument('-p', '--parallel', action="store_true", help='run envs in parallel mode')
     parser.add_argument('-pb', '--parallel_backend', type=str, default='torch', choices=['ray', 'torch'], help='parallel backend')
-    parser.add_argument('--num_processes', type=int, help='number of parallel processes started in parallel mode (0=automatic number of cpus)', default=0)
-    parser.add_argument('--num_threads', type=int, help='number of parallel threads running in PPO (0=automatic number of cpus)', default=0)
+    parser.add_argument('-rpg', '--runs_per_gpu', type=int, help='number of experiments per GPU', default=1)
+    parser.add_argument('--num_threads', type=int, help='number of parallel threads running in PPO (0=automatic number of cpus)', default=4)
     parser.add_argument('-t', '--thread', action="store_true", help='do not use: technical parameter for parallel run')
 
     args = parser.parse_args()
@@ -177,11 +192,8 @@ if __name__ == '__main__':
             experiment.trials = 1
 
         if args.parallel:
-            if args.num_processes == 0:
-                num_cpus = psutil.cpu_count(logical=True)
-            else:
-                num_cpus = min(psutil.cpu_count(logical=True), args.num_processes)
-            print('Running parallel {0} trainings'.format(min(experiment.trials, num_cpus)))
+            num_cpus = psutil.cpu_count(logical=True)
+            print('Running parallel {0} trainings'.format(experiment.trials))
             print('Using {0} parallel backend'.format(args.parallel_backend))
 
             if args.parallel_backend == 'ray':

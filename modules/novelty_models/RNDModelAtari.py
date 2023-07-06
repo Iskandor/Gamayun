@@ -617,8 +617,8 @@ class ASPDModelAtari(nn.Module):
         self.config = config
         self.action_dim = action_dim
 
-        input_channels = 1
-        # input_channels = input_shape[0]
+        # input_channels = 1
+        input_channels = input_shape[0]
         input_height = input_shape[1]
         input_width = input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
@@ -657,7 +657,8 @@ class ASPDModelAtari(nn.Module):
         return mlp
 
     def preprocess(self, state):
-        return state[:, 0, :, :].unsqueeze(1)
+        # return state[:, 0, :, :].unsqueeze(1)
+        return state
 
     def forward(self, state, action):
         predicted_state, predicted_action = self.learned_state(self.preprocess(state)), self.learned_action(action)
