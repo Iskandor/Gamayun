@@ -1,7 +1,7 @@
 from agents.PPOAgent import PPOAgent
 from algorithms.PPO import PPO
 from algorithms.ReplayBuffer import GenericTrajectoryBuffer
-from modules.PPO_AtariModules import PPOAtariNetwork, PPOAtariNetworkRND, PPOAtariNetworkSND, PPOAtariNetworkSP, PPOAtariNetworkICM, PPOAtariNetworkASPD
+from modules.PPO_AtariModules import PPOAtariNetwork, PPOAtariNetworkRND, PPOAtariNetworkSND, PPOAtariNetworkSP, PPOAtariNetworkICM
 from motivation.ForwardModelMotivation import ForwardModelMotivation
 from motivation.RNDMotivation import RNDMotivation, ASPDMotivation
 from motivation.SNDMotivation import SNDMotivationFactory

@@ -7,11 +7,11 @@ from plots.dataloader import prepare_data
 from plots.paths import plot_root
 
 def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_details=None, window=1000):
-    font = {'family': 'normal',
-            'weight': 'bold',
-            'size': 16}
-
-    matplotlib.rc('font', **font)
+    # font = {'family': 'normal',
+    #         'weight': 'bold',
+    #         'size': 16}
+    #
+    # matplotlib.rc('font', **font)
 
     if plot_details is None:
         plot_details = []

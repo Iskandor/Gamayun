@@ -4,11 +4,13 @@ from math import sqrt
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import torchvision
 from torchvision import transforms
 
 from modules import init_orthogonal
+from utils.Augmentation import aug_random_apply, aug_pixelate, aug_mask_tiles, aug_noise
 
 
 class AtariStateEncoderSmall(nn.Module):
@@ -359,34 +361,35 @@ class VICRegEncoderAtari(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
+        self.projector_dim = feature_dim * 2
 
         self.encoder = AtariStateEncoderSmall(input_shape, feature_dim)
+
+        self.projector = nn.Sequential(
+            nn.Linear(self.feature_dim, self.projector_dim),
+            nn.ReLU(),
+            nn.Linear(self.projector_dim, self.projector_dim)
+        )
 
     def forward(self, state):
         return self.encoder(state)
 
     def loss_function(self, states, next_states):
-        n = states.shape[0]
-        d = self.feature_dim
-        # y_a = self.augment(states)
-        # y_b = self.augment(states)
-        z_a = self.encoder(states)
-        z_b = self.encoder(next_states)
+        x_a = states[:, 0, :, :].unsqueeze(1)
+        # x_b = next_states[:, 0, :, :].unsqueeze(1)
+        index = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
+        x_b = torch.gather(next_states, 1, index)
 
-        inv_loss = nn.functional.mse_loss(z_a, z_b)
+        # y_a = self.augment(x_a)
+        # y_b = self.augment(x_b)
+        y_a = x_a
+        y_b = x_b
+        z_a = self.encoder(y_a)
+        z_b = self.encoder(y_b)
 
-        std_z_a = torch.sqrt(z_a.var(dim=0) + 1e-04)
-        std_z_b = torch.sqrt(z_b.var(dim=0) + 1e-04)
-        var_loss = torch.mean(nn.functional.relu(1 - std_z_a)) + torch.mean(nn.functional.relu(1 - std_z_b))
-
-        z_a = (z_a - z_a.mean(dim=0))
-        z_b = (z_b - z_b.mean(dim=0))
-
-        cov_z_a = torch.matmul(z_a.t(), z_a) / (n - 1)
-        cov_z_b = torch.matmul(z_b.t(), z_b) / (n - 1)
-
-        cov_loss = cov_z_a.masked_select(~torch.eye(self.feature_dim, dtype=torch.bool, device=self.config.device)).pow_(2).sum() / self.feature_dim + \
-                   cov_z_b.masked_select(~torch.eye(self.feature_dim, dtype=torch.bool, device=self.config.device)).pow_(2).sum() / self.feature_dim
+        inv_loss = self.invariance(z_a, z_b)
+        var_loss = self.variance(z_a) + self.variance(z_b)
+        cov_loss = self.covariance(z_a) + self.covariance(z_b)
 
         la = 1.
         mu = 1.
@@ -394,18 +397,59 @@ class VICRegEncoderAtari(nn.Module):
 
         return la * inv_loss + mu * var_loss + nu * cov_loss
 
-    def augment(self, x):
-        # ref = transforms.ToPILImage()(x[0])
-        # ref.show()
-        # transforms_train = torchvision.transforms.Compose([
-        #     transforms.RandomResizedCrop(96, scale=(0.66, 1.0))])
-        # transforms_train = transforms.RandomErasing(p=1)
-        # print(x.max())
-        ax = x + torch.randn_like(x) * 0.1
-        ax = nn.functional.upsample(nn.functional.avg_pool2d(ax, kernel_size=2), scale_factor=2, mode='bilinear')
-        # print(ax.max())
+    @staticmethod
+    def variance(z, gamma=1):
+        return F.relu(gamma - z.std(0)).mean()
 
-        # aug = transforms.ToPILImage()(ax[0])
-        # aug.show()
+    @staticmethod
+    def invariance(z1, z2):
+        return F.mse_loss(z1, z2)
+
+    @staticmethod
+    def covariance(z):
+        n, d = z.shape
+        mu = z.mean(0)
+        cov = torch.matmul((z - mu).t(), z - mu) / (n - 1)
+        cov_loss = cov.pow(2).sum() - cov.pow(2).diag().sum() / d
+
+        return cov_loss
+
+
+    @staticmethod
+    def augment(x, p=0.5):
+        ax = x
+        ax = aug_random_apply(ax, p, aug_pixelate)
+        ax = aug_random_apply(ax, p, aug_mask_tiles)
+        ax = aug_random_apply(ax, p, aug_noise)
 
         return ax
+
+
+class AMIEncoderAtari(nn.Module):
+    def __init__(self, input_shape, action_dim, config):
+        super(AMIEncoderAtari, self).__init__()
+
+        self.config = config
+        self.dim = 32
+        self.window = 4
+        self.action_dim = action_dim
+        self.classifier1 = nn.Linear(72, self.dim)
+        self.classifier2 = nn.Linear(512, self.dim)
+
+    def forward(self, actions):
+        # a = torch.nn.functional.pad(actions, (0, 0, 3, 0))
+        a = torch.nn.functional.unfold(actions.unsqueeze(0).unsqueeze(0), kernel_size=(self.window, self.action_dim)).squeeze(0).transpose(0, 1)
+        a = self.classifier1(a)
+        return a
+
+    def loss_function(self, representations, next_representations, actions):
+        N = representations.shape[0] - (self.window - 1)
+        state_representation = self.classifier2(next_representations[(self.window - 1):, :] - representations[:-(self.window - 1), :])
+        action_representation = self(actions)
+
+        logits = torch.matmul(state_representation, action_representation.T)
+        target = torch.arange(N).to(self.config.device)
+        loss = nn.functional.cross_entropy(logits, target, reduction='mean')
+
+        return loss
+

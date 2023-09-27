@@ -5,7 +5,7 @@ import torch.nn as nn
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
 from modules.forward_models.ForwardModelAtari import SPModelAtari, ICMModelAtari
-from modules.novelty_models.RNDModelAtari import RNDModelAtari, STDModelAtari, BarlowTwinsModelAtari, VICRegModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, ASPDModelAtari
+from modules.novelty_models.RNDModelAtari import RNDModelAtari, STDModelAtari, BarlowTwinsModelAtari, VICRegModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari
 
 
 class PPOAtariNetwork(torch.nn.Module):
@@ -118,9 +118,5 @@ class PPOAtariNetworkSND(PPOAtariMotivationNetwork):
             self.cnd_model = VINVModelAtari(input_shape, action_dim, config)
         if config.type == 'tp':
             self.cnd_model = TPModelAtari(input_shape, action_dim, config)
-
-
-class PPOAtariNetworkASPD(PPOAtariMotivationNetwork):
-    def __init__(self, input_shape, action_dim, config, head):
-        super(PPOAtariNetworkASPD, self).__init__(input_shape, action_dim, config, head)
-        self.aspd_model = ASPDModelAtari(input_shape, action_dim, config)
+        if config.type == 'ami':
+            self.cnd_model = AMIModelAtari(input_shape, action_dim, config)

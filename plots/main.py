@@ -1,17 +1,21 @@
 from plots import plot
 from plots.analytic_table import compute_table_values
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def atari_env(plots=True, tables=True):
-    key = 'score'
+    key = 're'
     config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'icm', 'id': '30', 'legend': 'ICM'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '49', 'legend': 'SND-V', 'mode': 'mch'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '42', 'legend': 'SND-STD'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '42', 'legend': 'SND-STD'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '44', 'legend': 'SND-VIC'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fwd', 'id': '45', 'legend': 'SP'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fwd', 'id': '45', 'legend': 'SP'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '53'},
     ]
 
     if tables:
@@ -21,86 +25,86 @@ def atari_env(plots=True, tables=True):
         plot('montezuma', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
     #
     #
-    config = [
-        {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
-        # {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'icm', 'id': '10', 'legend': 'ICM'},
-        # {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '14', 'legend': 'SND-V', 'mode': 'mch'},
-        {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '11', 'legend': 'SND-STD'},
-        {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '13', 'legend': 'SND-VIC'},
-        # {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '15', 'legend': 'SND-VINV'},
-        {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'fwd', 'id': '12', 'legend': 'SP'},
-    ]
-
-    if tables:
-        compute_table_values(config, keys=[key])
-
-    if plots:
-        plot('gravitar', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'venture', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        {'env': 'venture', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
-        # {'env': 'venture', 'algorithm': 'ppo', 'model': 'icm', 'id': '6', 'legend': 'ICM'},
-        # {'env': 'venture', 'algorithm': 'ppo', 'model': 'cnd', 'id': '10', 'legend': 'SND-V', 'mode': 'mch'},
-        {'env': 'venture', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
-        {'env': 'venture', 'algorithm': 'ppo', 'model': 'cnd', 'id': '8', 'legend': 'SND-VIC'},
-        {'env': 'venture', 'algorithm': 'ppo', 'model': 'fwd', 'id': '7', 'legend': 'SP'},
-    ]
-
-    if tables:
-        compute_table_values(config, keys=[key])
-
-    if plots:
-        plot('venture', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
-        # {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'icm', 'id': '5', 'legend': 'ICM'},
-        # {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'SND-V'},
-        {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
-        {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'cnd', 'id': '7', 'legend': 'SND-VIC'},
-        {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'fwd', 'id': '6', 'legend': 'SP'},
-    ]
-
-    if tables:
-        compute_table_values(config, keys=[key])
-
-    if plots:
-        plot('pitfall', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
-        # {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'icm', 'id': '5', 'legend': 'ICM'},
-        # {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'cnd', 'id': '8', 'legend': 'SND-V', 'mode': 'mch'},
-        {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
-        {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'cnd', 'id': '7', 'legend': 'SND-VIC'},
-        {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'fwd', 'id': '6', 'legend': 'SP'},
-    ]
-
-    if tables:
-        compute_table_values(config, keys=[key])
-
-    if plots:
-        plot('private_eye', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'solaris', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        {'env': 'solaris', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
-        # {'env': 'solaris', 'algorithm': 'ppo', 'model': 'icm', 'id': '5', 'legend': 'ICM'},
-        # {'env': 'solaris', 'algorithm': 'ppo', 'model': 'cnd', 'id': '8', 'legend': 'SND-V'},
-        {'env': 'solaris', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
-        {'env': 'solaris', 'algorithm': 'ppo', 'model': 'cnd', 'id': '7', 'legend': 'SND-VIC'},
-        {'env': 'solaris', 'algorithm': 'ppo', 'model': 'fwd', 'id': '6', 'legend': 'SP'},
-    ]
-
-    if tables:
-        compute_table_values(config, keys=[key])
-
-    if plots:
-        plot('solaris', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
+    # config = [
+    #     {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
+    #     {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
+    #     # {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'icm', 'id': '10', 'legend': 'ICM'},
+    #     # {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '14', 'legend': 'SND-V', 'mode': 'mch'},
+    #     {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '11', 'legend': 'SND-STD'},
+    #     {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '13', 'legend': 'SND-VIC'},
+    #     # {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'cnd', 'id': '15', 'legend': 'SND-VINV'},
+    #     {'env': 'gravitar', 'algorithm': 'ppo', 'model': 'fwd', 'id': '12', 'legend': 'SP'},
+    # ]
+    #
+    # if tables:
+    #     compute_table_values(config, keys=[key])
+    #
+    # if plots:
+    #     plot('gravitar', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'venture', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
+    #     {'env': 'venture', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
+    #     # {'env': 'venture', 'algorithm': 'ppo', 'model': 'icm', 'id': '6', 'legend': 'ICM'},
+    #     # {'env': 'venture', 'algorithm': 'ppo', 'model': 'cnd', 'id': '10', 'legend': 'SND-V', 'mode': 'mch'},
+    #     {'env': 'venture', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
+    #     {'env': 'venture', 'algorithm': 'ppo', 'model': 'cnd', 'id': '8', 'legend': 'SND-VIC'},
+    #     {'env': 'venture', 'algorithm': 'ppo', 'model': 'fwd', 'id': '7', 'legend': 'SP'},
+    # ]
+    #
+    # if tables:
+    #     compute_table_values(config, keys=[key])
+    #
+    # if plots:
+    #     plot('venture', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
+    #     {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
+    #     # {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'icm', 'id': '5', 'legend': 'ICM'},
+    #     # {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'SND-V'},
+    #     {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
+    #     {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'cnd', 'id': '7', 'legend': 'SND-VIC'},
+    #     {'env': 'pitfall', 'algorithm': 'ppo', 'model': 'fwd', 'id': '6', 'legend': 'SP'},
+    # ]
+    #
+    # if tables:
+    #     compute_table_values(config, keys=[key])
+    #
+    # if plots:
+    #     plot('pitfall', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
+    #     {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
+    #     # {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'icm', 'id': '5', 'legend': 'ICM'},
+    #     # {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'cnd', 'id': '8', 'legend': 'SND-V', 'mode': 'mch'},
+    #     {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
+    #     {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'cnd', 'id': '7', 'legend': 'SND-VIC'},
+    #     {'env': 'private_eye', 'algorithm': 'ppo', 'model': 'fwd', 'id': '6', 'legend': 'SP'},
+    # ]
+    #
+    # if tables:
+    #     compute_table_values(config, keys=[key])
+    #
+    # if plots:
+    #     plot('private_eye', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'solaris', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
+    #     {'env': 'solaris', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
+    #     # {'env': 'solaris', 'algorithm': 'ppo', 'model': 'icm', 'id': '5', 'legend': 'ICM'},
+    #     # {'env': 'solaris', 'algorithm': 'ppo', 'model': 'cnd', 'id': '8', 'legend': 'SND-V'},
+    #     {'env': 'solaris', 'algorithm': 'ppo', 'model': 'cnd', 'id': '4', 'legend': 'SND-STD'},
+    #     {'env': 'solaris', 'algorithm': 'ppo', 'model': 'cnd', 'id': '7', 'legend': 'SND-VIC'},
+    #     {'env': 'solaris', 'algorithm': 'ppo', 'model': 'fwd', 'id': '6', 'legend': 'SP'},
+    # ]
+    #
+    # if tables:
+    #     compute_table_values(config, keys=[key])
+    #
+    # if plots:
+    #     plot('solaris', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
 
 
 def procgen_env(plots=True, tables=True):
@@ -172,5 +176,5 @@ def procgen_env(plots=True, tables=True):
 
 
 if __name__ == '__main__':
-    atari_env(plots=False)
+    atari_env(plots=True)
     # procgen_env(plots=True)

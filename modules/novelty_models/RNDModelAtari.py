@@ -1,3 +1,4 @@
+import random
 from math import sqrt
 
 import torch
@@ -6,7 +7,7 @@ import numpy as np
 
 from analytic.ResultCollector import ResultCollector
 from modules import init_orthogonal
-from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall
+from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari
 from utils.RunningAverage import RunningStatsSimple
 
 
@@ -516,7 +517,8 @@ class VICRegModelAtari(nn.Module):
         prediction, target = self(state)
 
         loss_prediction = nn.functional.mse_loss(prediction, target.detach(), reduction='mean')
-        loss_target = self.target_model.loss_function(self.preprocess(state), self.preprocess(next_state))
+
+        loss_target = self.target_model.loss_function(state, next_state)
 
         analytic = ResultCollector()
         analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach())
@@ -610,83 +612,81 @@ class TPModelAtari(VICRegModelAtari):
         return loss_prediction + loss_target + loss_terminal
 
 
-class ASPDModelAtari(nn.Module):
+class AMIModelAtari(nn.Module):
     def __init__(self, input_shape, action_dim, config):
-        super(ASPDModelAtari, self).__init__()
+        super(AMIModelAtari, self).__init__()
 
         self.config = config
         self.action_dim = action_dim
 
-        # input_channels = 1
-        input_channels = input_shape[0]
+        input_channels = 1
+        # input_channels = input_shape[0]
         input_height = input_shape[1]
         input_width = input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
         self.feature_dim = 512
 
-        self.state_encoder = VICRegEncoderAtari(self.input_shape, self.feature_dim, config)
-        self.action_encoder = self.create_action_encoder(action_dim)
-        self.learned_state = torch.nn.Sequential(*(list(AtariStateEncoderSmall(self.input_shape, self.feature_dim).main)+list(self.create_learned_model_mlp())))
-        self.learned_action = self.create_action_encoder(action_dim)
+        fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
-    def create_action_encoder(self, action_dim):
-        action_encoder = nn.Sequential(
-            nn.Linear(action_dim, self.feature_dim),
+        self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
+
+        self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim, config)
+
+        self.learned_model = nn.Sequential(
+            nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(fc_inputs_count, self.feature_dim),
             nn.ELU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.ELU(),
-            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.Linear(self.feature_dim, self.feature_dim)
         )
-        gain = sqrt(2)
-        init_orthogonal(action_encoder[0], gain)
-        init_orthogonal(action_encoder[2], gain)
-        init_orthogonal(action_encoder[4], gain)
-
-        return action_encoder
-
-    def create_learned_model_mlp(self):
-        mlp = nn.Sequential(
-            nn.ELU(),
-            nn.Linear(self.feature_dim, self.feature_dim),
-            nn.ELU(),
-            nn.Linear(self.feature_dim, self.feature_dim))
 
         gain = sqrt(2)
-        init_orthogonal(mlp[1], gain)
-        init_orthogonal(mlp[3], gain)
-        return mlp
+        init_orthogonal(self.learned_model[0], gain)
+        init_orthogonal(self.learned_model[2], gain)
+        init_orthogonal(self.learned_model[4], gain)
+        init_orthogonal(self.learned_model[7], gain)
+        init_orthogonal(self.learned_model[9], gain)
+        init_orthogonal(self.learned_model[11], gain)
+
+        self.action_encoder = AMIEncoderAtari(self.input_shape, self.action_dim, config)
 
     def preprocess(self, state):
-        # return state[:, 0, :, :].unsqueeze(1)
-        return state
+        return state[:, 0, :, :].unsqueeze(1)
 
-    def forward(self, state, action):
-        predicted_state, predicted_action = self.learned_state(self.preprocess(state)), self.learned_action(action)
-        target_state, target_action = self.state_encoder(self.preprocess(state)), self.action_encoder(action)
+    def forward(self, state):
+        predicted_code = self.learned_model(self.preprocess(state))
+        target_code = self.target_model(self.preprocess(state))
 
-        return predicted_state, predicted_action, target_state, target_action
+        return predicted_code, target_code
 
-    def error(self, state, action):
+    def error(self, state):
         with torch.no_grad():
-            predicted_state, predicted_action, target_state, target_action = self(state, action)
-            error = self.k_distance(self.config.cnd_error_k, predicted_state + predicted_action, target_state + target_action, reduction='mean')
+            prediction, target = self(state)
+            error = self.k_distance(self.config.cnd_error_k, prediction, target, reduction='mean')
 
         return error
 
-    def loss_function(self, state, action, next_state):
-        predicted_state, predicted_action, target_state, target_action = self(state, action)
+    def loss_function(self, state, next_state, actions):
+        prediction, target = self(state)
+        _, next_target = self(next_state)
 
-        loss_prediction = nn.functional.mse_loss(predicted_state + predicted_action, target_state.detach() + target_action.detach(), reduction='mean')
-        loss_state_encoder = self.state_encoder.loss_function(self.preprocess(state), self.preprocess(next_state))
+        loss_prediction = nn.functional.mse_loss(prediction, target.detach(), reduction='mean')
 
-        predicted_next_state = target_state.detach() + target_action
-        target_next_state = self.state_encoder(self.preprocess(next_state)).detach()
-        loss_action_encoder = nn.functional.mse_loss(predicted_next_state, target_next_state, reduction='mean')
+        loss_target = self.target_model.loss_function(state, next_state)
+
+        loss_action = self.action_encoder.loss_function(target, next_target, actions)
 
         analytic = ResultCollector()
-        analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach())
+        analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), loss_action=loss_action.unsqueeze(-1).detach())
 
-        return loss_prediction + loss_state_encoder + loss_action_encoder
+        return loss_prediction + loss_target + loss_action * 0.2
 
     @staticmethod
     def k_distance(k, prediction, target, reduction='sum'):
@@ -697,3 +697,6 @@ class ASPDModelAtari(nn.Module):
             ret = ret.pow(k).mean(dim=1, keepdim=True)
 
         return ret
+
+    def update_state_average(self, state):
+        pass

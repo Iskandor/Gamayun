@@ -1,8 +1,10 @@
 from pathlib import Path
 
-data_root = 'F:/Experiments/data'
-plot_root = 'F:/Experiments/plots'
-states_root = 'F:/Experiments/states'
-models_root = 'F:/Experiments/models'
+root = 'C:/Work/PHD/Experiments'
+
+data_root = Path(root) / 'data'
+plot_root = Path(root) / 'plots'
+states_root = Path(root) / 'states'
+models_root = Path(root) / 'models'
 
 results_path = Path(data_root) / 'ppo'

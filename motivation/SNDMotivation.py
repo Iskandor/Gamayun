@@ -10,7 +10,7 @@ class SNDMotivationFactory:
     def get_motivation(type, network, lr, eta=1, device='cpu'):
         if type == 'vanilla':
             result = SNDVMotivation(network, lr, eta, device)
-        elif type == 'vinv':
+        elif type == 'vinv' or type == 'ami':
             result = SINVMotivation(network, lr, eta, device)
         elif type == 'tp':
             result = TPMotivation(network, lr, eta, device)
