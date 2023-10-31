@@ -115,10 +115,10 @@ class ExperimentNEnvPPO:
         numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
         analytic.clear()
 
-    def run_rnd_model(self, agent, trial):
+    def run_rnd_model(self, agent, trial, shift):
         config = self._config
         n_env = config.n_env
-        trial = trial + config.shift
+        trial = trial + shift
         step_counter = StepCounter(int(config.steps * 1e6))
 
         analytic = ResultCollector()

@@ -2,17 +2,14 @@ import argparse
 import math
 import os
 import platform
-import subprocess
 
 import psutil
 import ray
 import torch
-from torch import multiprocessing
-from torch.multiprocessing import Pool
 
 import PPO_HardAtariGame
 import PPO_ProcgenGame
-from config.ConfigAtari import ConfigMontezumaBaseline
+from experiment.ExperimentServer import ExperimentServer
 
 envs = {
     'ppo': {
@@ -46,96 +43,6 @@ def run_ray_parallel(args, experiment):
         ray.get([run_thread_ray.remote(tp) for tp in thread_params])
 
 
-def run_thread(thread_params):
-    algorithm, env, experiment, i, gpu = thread_params
-
-    if experiment.device == 'cuda':
-        torch.cuda.set_device(gpu)
-
-    run(i, algorithm, env, experiment)
-
-
-def run(id, algorithm, env, experiment):
-    print('Starting experiment {0}_{1} on env {2} learning algorithm {3} model {4} {5}'.format(experiment.name, id + experiment.shift, env, algorithm, experiment.model, experiment.type if hasattr(experiment, 'type') else ''))
-
-    env_name = envs[algorithm][env]['name']
-    env_class = envs[algorithm][env]['class']
-
-    if experiment.model == 'baseline':
-        env_class.run_baseline(experiment, id, env_name)
-    if experiment.model == 'rnd':
-        env_class.run_rnd_model(experiment, id, env_name)
-    if experiment.model == 'snd':
-        env_class.run_snd_model(experiment, id, env_name)
-    if experiment.model == 'icm':
-        env_class.run_icm_model(experiment, id, env_name)
-    if experiment.model == 'sp':
-        env_class.run_sp_model(experiment, id, env_name)
-    if experiment.model == 'aspd':
-        env_class.run_aspd_model(experiment, id, env_name)
-
-
-def write_command_file(args, experiment):
-    print(multiprocessing.cpu_count())
-    thread_per_env = max(multiprocessing.cpu_count() // experiment.trials, 1)
-    if platform.system() == 'Windows':
-        file = open("run.bat", "w")
-        file.write('set OMP_NUM_THREADS={0}\n'.format(thread_per_env))
-        for i in range(experiment.trials):
-            file.write('start "" python main.py --env {0} --config {1} -t -s {2} \n'.format(args.env, args.config, i + args.shift))
-        file.close()
-
-    if platform.system() == 'Linux':
-        file = open("run.sh", "w")
-        for i in range(experiment.trials):
-            file.write(
-                'OMP_NUM_THREADS={0} python3 main.py --env {1} --config {2} -t -s {3} & \n'.format(thread_per_env, args.env, args.config, i + args.shift))
-        file.close()
-
-
-def run_command_file():
-    if platform.system() == 'Windows':
-        subprocess.call([r'run.bat'])
-        if os.path.exists('run.bat'):
-            os.remove('run.bat')
-    if platform.system() == 'Linux':
-        os.chmod('run.sh', 777)
-        subprocess.run(['bash', './run.sh'])
-        if os.path.exists('./run.sh'):
-            os.remove('./run.sh')
-
-
-def run_torch_parallel(args, experiment):
-    multiprocessing.set_start_method('spawn')
-
-    # for CPU
-    gpu = -1
-    total_experiment_segments = 1
-    runs_per_segment = experiment.trials
-
-    if args.device == 'cuda':
-        total_gpus = len(args.gpus)
-        if torch.cuda.device_count() < total_gpus:
-            print("Warning: detected less devices than set in arguments, the number will be adjusted to available devices")
-            total_gpus = torch.cuda.device_count()
-
-        if experiment.trials > (total_gpus * args.runs_per_gpu):
-            total_experiment_segments = math.ceil(experiment.trials / args.runs_per_gpu)
-            runs_per_segment = args.runs_per_gpu
-        else:
-            runs_per_segment = experiment.trials
-
-    for n in range(total_experiment_segments):
-        thread_params = []
-        for i in range(n * runs_per_segment, min((n+1) * runs_per_segment, experiment.trials)):
-            if total_gpus > 0:
-                gpu = args.gpus[i % total_gpus]
-            thread_params.append((args.algorithm, args.env, experiment, i, gpu))
-
-        with Pool(experiment.trials) as p:
-            p.map(run_thread, thread_params)
-
-
 def update_config(args, experiment):
     experiment.device = args.device
     experiment.shift = args.shift
@@ -160,53 +67,46 @@ if __name__ == '__main__':
     if not os.path.exists('./models'):
         os.mkdir('./models')
 
-    parser.add_argument('--env', type=str, help='environment name')
-    parser.add_argument('-a', '--algorithm', type=str, help='training algorithm', choices=['ppo', 'ddpg', 'a2c', 'dqn'])
-    parser.add_argument('--config', type=int, help='id of config')
+    parser.add_argument('--config', type=str, help='id of config')
     parser.add_argument('--device', type=str, help='device type', default='cpu')
-    parser.add_argument('--gpus', help='device ids', default=None)
+    parser.add_argument('--gpus', help='device ids', default=None, nargs="+", type=int)
     parser.add_argument('--load', type=str, help='path to saved agent', default='')
+    parser.add_argument('-t', '--trials', type=int, help='total number of trials', default=1)
     parser.add_argument('-s', '--shift', type=int, help='shift result id', default=0)
-    parser.add_argument('-p', '--parallel', action="store_true", help='run envs in parallel mode')
-    parser.add_argument('-pb', '--parallel_backend', type=str, default='torch', choices=['ray', 'torch'], help='parallel backend')
-    parser.add_argument('-rpg', '--runs_per_gpu', type=int, help='number of experiments per GPU', default=1)
+    parser.add_argument('--trials_per_gpu', type=int, help='number of trials per GPU', default=1)
     parser.add_argument('--num_threads', type=int, help='number of parallel threads running in PPO (0=automatic number of cpus)', default=4)
-    parser.add_argument('-t', '--thread', action="store_true", help='do not use: technical parameter for parallel run')
 
     args = parser.parse_args()
-    # if args.gpus:
-    #     args.gpus = [int(s) for s in args.gpus.split(',')]
-    #     device = '{0:s}:{1:d}'.format(args.device, args.gpus[0])
-    #     torch.set_default_device(device)
 
-    experiment = ConfigMontezumaBaseline(args.num_threads, args.device)
+    server = ExperimentServer()
+    server.run(args)
 
-    if args.load != '':
-        env_class = envs[args.algorithm][args.env]
-        env_class.test(experiment, args.load)
-    else:
-        if args.thread:
-            experiment.trials = 1
-
-        if args.parallel:
-            num_cpus = psutil.cpu_count(logical=True)
-            print('Running parallel {0} trainings'.format(experiment.trials))
-            print('Using {0} parallel backend'.format(args.parallel_backend))
-
-            if args.parallel_backend == 'ray':
-                if args.gpus:
-                    experiment.gpus = None
-                    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpus[0])
-                ray.shutdown()
-                ray.init(num_cpus=num_cpus, num_gpus=1)
-                torch.set_num_threads(max(1, num_cpus // experiment.trials))
-
-                run_ray_parallel(args, experiment)
-                # write_command_file(args, experiment)
-                # run_command_file()
-            elif args.parallel_backend == 'torch':
-                torch.set_num_threads(1)
-                run_torch_parallel(args, experiment)
-        else:
-            for i in range(experiment.trials):
-                run(i, args.algorithm, args.env, experiment)
+    # if args.load != '':
+    #     env_class = envs[args.algorithm][args.env]
+    #     env_class.test(experiment, args.load)
+    # else:
+    #     if args.thread:
+    #         experiment.trials = 1
+    #
+    #     if args.parallel:
+    #         num_cpus = psutil.cpu_count(logical=True)
+    #         print('Running parallel {0} trainings'.format(experiment.trials))
+    #         print('Using {0} parallel backend'.format(args.parallel_backend))
+    #
+    #         if args.parallel_backend == 'ray':
+    #             if args.gpus:
+    #                 experiment.gpus = None
+    #                 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpus[0])
+    #             ray.shutdown()
+    #             ray.init(num_cpus=num_cpus, num_gpus=1)
+    #             torch.set_num_threads(max(1, num_cpus // experiment.trials))
+    #
+    #             run_ray_parallel(args, experiment)
+    #             # write_command_file(args, experiment)
+    #             # run_command_file()
+    #         elif args.parallel_backend == 'torch':
+    #             torch.set_num_threads(1)
+    #             run_torch_parallel(args, experiment)
+    #     else:
+    #         for i in range(experiment.trials):
+    #             run(i, args.algorithm, args.env, experiment)

@@ -1,7 +1,7 @@
 import torch
 
 from agents import TYPE
-from agents.PPOAtariAgent import PPOAtariAgent
+from agents.PPOAtariAgent import PPOAtariAgent, PPOAtariRNDAgent
 from config.ConfigBase import ConfigPPO
 from experiment.ppo_nenv_experiment import ExperimentNEnvPPO
 from utils.AtariWrapper import WrapperHardAtari
@@ -9,6 +9,35 @@ from utils.MultiEnvWrapper import MultiEnvParallel
 
 
 class ConfigMontezumaBaseline(ConfigPPO):
+    def __init__(self, num_threads, device, shift=0):
+        super().__init__(steps=32, lr=0.0001, n_env=32, gamma=0.99, device=device)
+
+        self.num_threads = num_threads
+        self.shift = shift
+        self.env_name = 'MontezumaRevengeNoFrameskip-v4'
+
+    def run(self, trial):
+        print('Creating {0:d} environments'.format(self.n_env))
+        env = MultiEnvParallel([WrapperHardAtari(self.env_name) for _ in range(self.n_env)], self.n_env, self.num_threads)
+
+        input_shape = env.observation_space.shape
+        action_dim = env.action_space.n
+
+        print('Start training')
+        experiment = ExperimentNEnvPPO(self.env_name, env, self)
+
+        experiment.add_preprocess(self.encode_state)
+        agent = PPOAtariAgent(input_shape, action_dim, self, TYPE.discrete)
+        experiment.run_baseline(agent, trial, self.shift)
+
+        env.close()
+
+    @staticmethod
+    def encode_state(state):
+        return torch.tensor(state, dtype=torch.float32)
+
+
+class ConfigMontezumaRND(ConfigPPO):
     def __init__(self, num_threads, device, shift=0):
         super().__init__(steps=32, lr=0.0001, n_env=32, gamma=0.99, device=device)
 
@@ -25,8 +54,8 @@ class ConfigMontezumaBaseline(ConfigPPO):
         experiment = ExperimentNEnvPPO(env_name, env, self)
 
         experiment.add_preprocess(self.encode_state)
-        agent = PPOAtariAgent(input_shape, action_dim, self, TYPE.discrete)
-        experiment.run_baseline(agent, trial, shift)
+        agent = PPOAtariRNDAgent(input_shape, action_dim, self, TYPE.discrete)
+        experiment.run_rnd_model(agent, trial, shift)
 
         env.close()
 

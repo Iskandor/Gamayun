@@ -1,6 +1,6 @@
 --find-links https://download.pytorch.org/whl/torch_stable.html
 box2d-py
-etaprogress
+etaprogress~=1.1.1
 gym[atari, accept-rom-license]==0.26.2
 imageio~=2.16.1
 matplotlib~=3.5.1
@@ -9,14 +9,16 @@ numpy~=1.21.5
 opencv-python~=4.5.5.64
 psutil~=5.9.0
 pyclustering
-ray
-scikit-learn
+ray~=1.7.0
+scikit-learn~=0.24.2
 torch==2.0.1+cu118
 torchvision==0.15.2+cu118
-tqdm
+tqdm~=4.61.1
 umap-learn
 seaborn~=0.11.2
 setuptools~=61.2.0
 pillow~=9.1.0
 scipy~=1.8.0
 procgen~=0.10.7
+yaml~=0.2.5
+pyyaml~=5.4.1

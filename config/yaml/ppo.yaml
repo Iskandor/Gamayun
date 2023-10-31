@@ -1,0 +1,6 @@
+batch_size : 512
+trajectory_size : 16384
+ppo_epochs : 4
+actor_loss_weight : 1
+critic_loss_weight : 0.5
+beta : 0.001

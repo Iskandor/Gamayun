@@ -1,4 +1,4 @@
-
+from .ConfigAtari import *
 
 
 
