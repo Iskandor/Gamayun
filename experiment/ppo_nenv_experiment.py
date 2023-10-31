@@ -48,10 +48,10 @@ class ExperimentNEnvPPO:
                 state0 = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0).to(config.device)
             video_recorder.close()
 
-    def run_baseline(self, agent, trial):
+    def run_baseline(self, agent, trial, shift):
         config = self._config
         n_env = config.n_env
-        trial = trial + config.shift
+        trial = trial + shift
         step_counter = StepCounter(int(config.steps * 1e6))
         reward_avg = RunningAverageWindow(100)
         time_estimator = PPOTimeEstimator(step_counter.limit)

@@ -73,6 +73,7 @@ class RunningStatsSimple:
 
 class RunningStats:
     def __init__(self, shape, device, n=1):
+        self.device = device
         self.n = n
         if n > 1:
             shape = (n,) + shape
@@ -87,6 +88,7 @@ class RunningStats:
         self.std = (self.var ** 0.5) + self.eps
 
     def update(self, x, reduction='mean'):
+        x = x.to(self.device)
         self.count += 1
 
         mean = None

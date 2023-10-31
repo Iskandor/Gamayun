@@ -49,7 +49,7 @@ class GenericTrajectoryBuffer(GenericBuffer):
     def memory_init(self, key, shape):
         steps_per_env = self.capacity // self.n_env
         shape = (steps_per_env, self.n_env,) + shape
-        self.memory[key] = torch.zeros(shape)
+        self.memory[key] = torch.zeros(shape, device='cpu')
 
     def add(self, **kwargs):
         if len(self.memory) == 0:
