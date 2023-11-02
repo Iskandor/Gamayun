@@ -20,7 +20,7 @@ class PPO:
         self._network = network
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
         self._beta = p_beta
-        self._gamma = [float(g) for g in p_gamma.split(',')] if isinstance(p_gamma, List) else [p_gamma]
+        self._gamma = [float(g) for g in p_gamma] if isinstance(p_gamma, List) else [p_gamma]
         self._epsilon = p_epsilon
         self._lambda = p_lambda
         self._device = device

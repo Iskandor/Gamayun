@@ -49,7 +49,7 @@ class AtariStateEncoderSmall(nn.Module):
 
 class AtariStateEncoder(nn.Module):
 
-    def __init__(self, input_shape, feature_dim):
+    def __init__(self, input_shape, feature_dim, gain=0.5):
         super().__init__()
         self.feature_size = feature_dim
         self.hidden_size = self.feature_size
@@ -73,7 +73,6 @@ class AtariStateEncoder(nn.Module):
         )
 
         # gain = nn.init.calculate_gain('relu')
-        gain = 0.5
         init_orthogonal(self.main[0], gain)
         init_orthogonal(self.main[2], gain)
         init_orthogonal(self.main[4], gain)
@@ -363,7 +362,7 @@ class VICRegEncoderAtari(nn.Module):
         self.feature_dim = feature_dim
         self.projector_dim = feature_dim * 2
 
-        self.encoder = AtariStateEncoderSmall(input_shape, feature_dim)
+        self.encoder = AtariStateEncoderSmall(input_shape, feature_dim, gain=0.5)
 
         self.projector = nn.Sequential(
             nn.Linear(self.feature_dim, self.projector_dim),

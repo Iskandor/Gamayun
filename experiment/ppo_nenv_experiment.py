@@ -114,6 +114,7 @@ class ExperimentNEnvPPO:
         save_data = analytic.finalize()
         numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
         analytic.clear()
+        self._env.close()
 
     def run_rnd_model(self, agent, trial, shift):
         config = self._config
@@ -191,11 +192,12 @@ class ExperimentNEnvPPO:
         save_data = analytic.finalize()
         numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
         analytic.clear()
+        self._env.close()
 
-    def run_snd_model(self, agent, trial):
+    def run_snd_model(self, agent, trial, shift):
         config = self._config
         n_env = config.n_env
-        trial = trial + config.shift
+        trial = trial + shift
         step_counter = StepCounter(int(config.steps * 1e6))
 
         analytic = ResultCollector()
@@ -266,13 +268,15 @@ class ExperimentNEnvPPO:
             state0 = state1
             time_estimator.update(n_env)
 
-        agent.save('./models/{0:s}_{1}_{2:d}'.format(config.name, config.model, trial))
+        filename = '{0:s}_{1:s}_{2:d}'.format(config.__class__.__name__, config.desc, trial)
+        print('Saving data...{0:s}'.format(filename))
 
-        print('Saving data...')
+        agent.save('./models/{0:s}'.format(filename))
         analytic.reset(numpy.array(range(n_env)))
         save_data = analytic.finalize()
-        numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
+        numpy.save('ppo_{0:s}'.format(filename), save_data)
         analytic.clear()
+        self._env.close()
 
     def run_sp_model(self, agent, trial):
         config = self._config
@@ -349,6 +353,7 @@ class ExperimentNEnvPPO:
         save_data = analytic.finalize()
         numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
         analytic.clear()
+        self._env.close()
 
     def run_icm_model(self, agent, trial):
         config = self._config
@@ -427,7 +432,7 @@ class ExperimentNEnvPPO:
         save_data = analytic.finalize()
         numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
         analytic.clear()
-
+        self._env.close()
 
     def run_aspd_model(self, agent, trial):
         config = self._config
@@ -510,3 +515,4 @@ class ExperimentNEnvPPO:
         save_data = analytic.finalize()
         numpy.save('ppo_{0}_{1}_{2:d}'.format(config.name, config.model, trial), save_data)
         analytic.clear()
+        self._env.close()

@@ -43,15 +43,6 @@ def run_ray_parallel(args, experiment):
         ray.get([run_thread_ray.remote(tp) for tp in thread_params])
 
 
-def update_config(args, experiment):
-    experiment.device = args.device
-    experiment.shift = args.shift
-    if args.num_threads == 0:
-        experiment.num_threads = psutil.cpu_count(logical=True)
-    else:
-        experiment.num_threads = args.num_threads
-
-
 if __name__ == '__main__':
     print(platform.system())
     print(torch.__version__)

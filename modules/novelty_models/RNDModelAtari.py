@@ -465,23 +465,13 @@ class VICRegModelAtari(nn.Module):
         self.input_shape = (input_channels, input_height, input_width)
         self.feature_dim = 512
 
-        fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
-
         self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
 
         self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim, config)
 
-        self.model = nn.Sequential(
-            nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(fc_inputs_count, self.feature_dim),
+        self.learned_model = AtariStateEncoderSmall(self.input_shape, self.feature_dim, gain=sqrt(2))
+
+        self.learned_projection = nn.Sequential(
             nn.ELU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.ELU(),
@@ -489,19 +479,14 @@ class VICRegModelAtari(nn.Module):
         )
 
         gain = sqrt(2)
-        init_orthogonal(self.model[0], gain)
-        init_orthogonal(self.model[2], gain)
-        init_orthogonal(self.model[4], gain)
-        init_orthogonal(self.model[6], gain)
-        init_orthogonal(self.model[9], gain)
-        init_orthogonal(self.model[11], gain)
-        init_orthogonal(self.model[13], gain)
+        init_orthogonal(self.learned_projection[1], gain)
+        init_orthogonal(self.learned_projection[3], gain)
 
     def preprocess(self, state):
         return state[:, 0, :, :].unsqueeze(1)
 
     def forward(self, state):
-        predicted_code = self.model(self.preprocess(state))
+        predicted_code = self.learned_projection(self.learned_model(self.preprocess(state)))
         target_code = self.target_model(self.preprocess(state))
 
         return predicted_code, target_code
@@ -509,7 +494,7 @@ class VICRegModelAtari(nn.Module):
     def error(self, state):
         with torch.no_grad():
             prediction, target = self(state)
-            error = self.k_distance(self.config.cnd_error_k, prediction, target, reduction='mean')
+            error = self.k_distance(2, prediction, target, reduction='mean')
 
         return error
 
