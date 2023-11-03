@@ -27,12 +27,6 @@ class MultiEnvParallel:
         self.truncs = numpy.zeros((envs_count, 1), dtype=numpy.float32)
         self.infos = [None] * envs_count
 
-        print("MultiEnvParallel")
-        print("envs_count      = ", self.envs_count)
-        print("threads_count   = ", self.threads_count)
-        print("envs_per_thread = ", self.envs_per_thread)
-        print("\n\n")
-
     def close(self):
         for i in range(self.envs_count):
             self.envs_list[i].close()
@@ -80,4 +74,13 @@ class MultiEnvParallel:
 
         return obs, reward, done, trunc, info
 
+    def __str__(self):
+        result = ''
 
+        result += "MultiEnvParallel\n"
+        result += "envs_count      = {0}\n".format(self.envs_count)
+        result += "threads_count   = {0}\n".format(self.threads_count)
+        result += "envs_per_thread = {0}\n".format(self.envs_per_thread)
+        result += "\n\n"
+
+        return result

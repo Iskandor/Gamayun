@@ -3,7 +3,6 @@ import torch
 from agents import TYPE
 from agents.PPOAtariAgent import PPOAtariAgent, PPOAtariRNDAgent, PPOAtariSNDAgent
 from config.ConfigBase import ConfigPPO
-from experiment.ppo_nenv_experiment import ExperimentNEnvPPO
 from utils.AtariWrapper import WrapperHardAtari
 from utils.MultiEnvWrapper import MultiEnvParallel
 
@@ -19,22 +18,20 @@ class ConfigAtari(ConfigPPO):
 
         self.input_shape = None
         self.action_dim = None
+        self.env = None
         self.experiment = None
 
-        self.init_experiment()
+        self.init_environment()
 
-    def init_experiment(self):
+    def init_environment(self):
         print('Creating {0:d} environments'.format(self.n_env))
-        env = MultiEnvParallel([WrapperHardAtari(self.env_name) for _ in range(self.n_env)], self.n_env, self.num_threads)
+        self.env = MultiEnvParallel([WrapperHardAtari(self.env_name) for _ in range(self.n_env)], self.n_env, self.num_threads)
 
-        self.input_shape = env.observation_space.shape
-        self.action_dim = env.action_space.n
-        self.experiment = ExperimentNEnvPPO(self.env_name, env, self)
-        self.experiment.add_preprocess(self.encode_state)
+        self.input_shape = self.env.observation_space.shape
+        self.action_dim = self.env.action_space.n
 
-    @staticmethod
-    def encode_state(state):
-        return torch.tensor(state, dtype=torch.float32)
+    def encode_state(self, state):
+        return torch.tensor(state, dtype=torch.float32, device=self.device)
 
 
 class ConfigMontezumaBaseline(ConfigAtari):
@@ -42,8 +39,11 @@ class ConfigMontezumaBaseline(ConfigAtari):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=0.99, num_threads=num_threads, device=device, shift=shift)
 
     def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
+
         agent = PPOAtariAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
-        self.experiment.run_baseline(agent, trial, self.shift)
+        agent.training_loop(self.env, name, trial, PPOAtariAgent.AgentState())
 
 
 class ConfigMontezumaRND(ConfigAtari):
@@ -54,8 +54,11 @@ class ConfigMontezumaRND(ConfigAtari):
         self.motivation_eta = 1
 
     def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
+
         agent = PPOAtariRNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
-        self.experiment.run_rnd_model(agent, trial, self.shift)
+        agent.training_loop(self.env, name, trial, PPOAtariRNDAgent.AgentState())
 
 
 class ConfigMontezumaSND(ConfigAtari):
@@ -65,8 +68,10 @@ class ConfigMontezumaSND(ConfigAtari):
         self.motivation_lr = 1e-4
         self.motivation_eta = 1
         self.type = 'vicreg'
-        self.desc = 'vicreg'
 
     def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'small', trial)
+
         agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
-        self.experiment.run_snd_model(agent, trial, self.shift)
+        agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())

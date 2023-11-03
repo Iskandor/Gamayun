@@ -1,16 +1,15 @@
+import numpy
 import torch
 
 from agents import TYPE
-from algorithms.PPO import PPO
 from algorithms.ReplayBuffer import GenericTrajectoryBuffer
 from modules.PPO_Modules import PPOSimpleNetwork
-from motivation.ForwardModelMotivation import ForwardModelMotivation
-from motivation.RNDMotivation import RNDMotivation
-from utils import one_hot_code
+from utils.RunningAverage import StepCounter, RunningAverageWindow
+from utils.TimeEstimator import PPOTimeEstimator
 
 
 class PPOAgent:
-    def __init__(self, state_dim, action_dim, action_type, config):
+    def __init__(self, state_dim, action_dim, config, action_type):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.config = config
@@ -19,9 +18,9 @@ class PPOAgent:
         self.algorithm = None
         self.action_type = action_type
 
-        # if config.gpus and len(config.gpus) > 1:
-        #     config.batch_size *= len(config.gpus)
-        #     self.network = nn.DataParallel(self.network, config.gpus)
+        self.step_counter = StepCounter(int(config.steps * 1e6))
+        self.reward_avg = RunningAverageWindow(100)
+        self.time_estimator = PPOTimeEstimator(self.step_counter.limit)
 
     def get_action(self, state):
         value, action, probs = self.network(state)
@@ -37,12 +36,56 @@ class PPOAgent:
         if self.action_type == TYPE.multibinary:
             return torch.argmax(action, dim=1).numpy()
 
-    def train(self, state0, value, action0, probs0, state1, reward, mask):
-        self.memory.add(state=state0.cpu(), value=value.cpu(), action=action0.cpu(), prob=probs0.cpu(), reward=reward.cpu(), mask=mask.cpu())
-        indices = self.memory.indices()
-        self.algorithm.train(self.memory, indices)
-        if indices is not None:
-            self.memory.clear()
+    def initialize_analysis(self):
+        raise NotImplementedError
+
+    def step(self, env, agent_state):
+        raise NotImplementedError
+
+    def check_terminal_states(self, env, agent_state, analysis, trial):
+        env_indices = numpy.nonzero(numpy.squeeze(agent_state.done, axis=1))[0]
+        stats = analysis.reset(env_indices)
+        self.step_counter.update(self.config.n_env)
+
+        for i, index in enumerate(env_indices):
+            self.reward_avg.update(stats['re'].sum[i])
+            self.print_step_info(trial, stats, i)
+            print(self.time_estimator)
+            agent_state.next_state[i], metadata = env.reset(index)
+
+    def print_step_info(self, trial, stats, i):
+        raise NotImplementedError
+
+    def update_analysis(self, agent_state, analysis):
+        raise NotImplementedError
+
+    def train(self, agent_state):
+        raise NotImplementedError
+
+    def training_loop(self, env, name, trial, agent_state):
+        s = numpy.zeros((self.config.n_env,) + env.observation_space.shape, dtype=numpy.float32)
+        for i in range(self.config.n_env):
+            s[i], metadata = env.reset(i)
+
+        agent_state.state = self.config.encode_state(s)
+
+        analytic = self.initialize_analysis()
+
+        while self.step_counter.running():
+            self.step(env, agent_state)
+            self.check_terminal_states(env, agent_state, analytic, trial)
+            self.train(agent_state)
+            self.update_analysis(agent_state, analytic)
+            self.time_estimator.update(self.config.n_env)
+
+        print('Saving data...{0:s}'.format(name))
+
+        self.save('./models/{0:s}'.format(name))
+        analytic.reset(numpy.array(range(self.config.n_env)))
+        save_data = analytic.finalize()
+        numpy.save('ppo_{0:s}'.format(name), save_data)
+        analytic.clear()
+        env.close()
 
     def save(self, path):
         torch.save(self.network.state_dict(), path + '.pth')
