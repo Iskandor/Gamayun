@@ -8,7 +8,7 @@ from utils.MultiEnvWrapper import MultiEnvParallel
 
 
 class ConfigAtari(ConfigPPO):
-    def __init__(self, env_name, steps, lr, n_env, gamma, num_threads, device, shift=0):
+    def __init__(self, env_name, steps, lr, n_env, gamma, num_threads, device, shift):
         super().__init__(steps=steps, lr=lr, n_env=n_env, gamma=gamma, device=device)
 
         self.num_threads = num_threads
@@ -35,7 +35,7 @@ class ConfigAtari(ConfigPPO):
 
 
 class ConfigMontezumaBaseline(ConfigAtari):
-    def __init__(self, num_threads, device, shift=0):
+    def __init__(self, num_threads, device, shift):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=0.99, num_threads=num_threads, device=device, shift=shift)
 
     def run(self, trial):
@@ -47,7 +47,7 @@ class ConfigMontezumaBaseline(ConfigAtari):
 
 
 class ConfigMontezumaRND(ConfigAtari):
-    def __init__(self, num_threads, device, shift=0):
+    def __init__(self, num_threads, device, shift):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
@@ -62,16 +62,16 @@ class ConfigMontezumaRND(ConfigAtari):
 
 
 class ConfigMontezumaSND(ConfigAtari):
-    def __init__(self, num_threads, device, shift=0):
+    def __init__(self, num_threads, device, shift):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
-        self.motivation_eta = 1
+        self.motivation_eta = .25
         self.type = 'vicreg'
 
     def run(self, trial):
         trial += self.shift
-        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'small', trial)
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'big_static', trial)
 
         agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
         agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())

@@ -44,11 +44,12 @@ def __init_general(function, layer, gain):
     else:
         function(layer.weight, gain)
 
-    if type(layer.bias) is tuple:
-        for b in layer.bias:
-            nn.init.zeros_(b)
-    else:
-        nn.init.zeros_(layer.bias)
+    if layer.bias is not None:
+        if type(layer.bias) is tuple:
+            for b in layer.bias:
+                nn.init.zeros_(b)
+        else:
+            nn.init.zeros_(layer.bias)
 
 
 def init_general_wb(function, weight, bias, gain):

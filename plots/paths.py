@@ -1,6 +1,6 @@
 from pathlib import Path
 
-root = 'C:/Work/PHD/Experiments'
+root = 'F:/SND'
 
 data_root = Path(root) / 'data'
 plot_root = Path(root) / 'plots'

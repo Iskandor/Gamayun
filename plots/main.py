@@ -6,23 +6,17 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def atari_env(plots=True, tables=True):
-    key = 're'
     config = [
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'baseline', 'id': '1', 'legend': 'Baseline'},
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'rnd', 'id': '2', 'legend': 'RND'},
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'icm', 'id': '30', 'legend': 'ICM'},
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '49', 'legend': 'SND-V', 'mode': 'mch'},
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '42', 'legend': 'SND-STD'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '44', 'legend': 'SND-VIC'},
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fwd', 'id': '45', 'legend': 'SP'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'cnd', 'id': '53'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': '1', 'legend': 'small random'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': '2', 'legend': 'big static'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': '3', 'legend': 'big static projector 1024'},
     ]
 
-    if tables:
-        compute_table_values(config, keys=[key])
+    # if tables:
+    #     compute_table_values(config, keys=[key])
 
     if plots:
-        plot('montezuma', config, labels=['external reward', 'score'], keys=[key], plot_details=[], window=10000)
+        plot('montezuma', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
     #
     #
     # config = [

@@ -7,7 +7,8 @@ import numpy as np
 
 from analytic.ResultCollector import ResultCollector
 from modules import init_orthogonal
-from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari
+from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari, AtariStateEncoderLarge, \
+    AtariStateEncoderResNet
 from utils.RunningAverage import RunningStatsSimple
 
 
@@ -469,7 +470,7 @@ class VICRegModelAtari(nn.Module):
 
         self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim, config)
 
-        self.learned_model = AtariStateEncoderSmall(self.input_shape, self.feature_dim, gain=sqrt(2))
+        self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
 
         self.learned_projection = nn.Sequential(
             nn.ELU(),

@@ -12,7 +12,7 @@ class ExperimentServer:
 
     def run(self, args):
         module = __import__('config')
-        experiment = getattr(module, args.config.rstrip())(args.num_threads, args.device)
+        experiment = getattr(module, args.config.rstrip())(args.num_threads, args.device, args.shift)
 
         if self.config.backend == 'torch':
             self.run_torch_parallel(experiment, args.trials, args.device, args.gpus, args.trials_per_gpu)

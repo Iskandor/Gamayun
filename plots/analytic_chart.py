@@ -115,8 +115,8 @@ def plot_multiple_models(keys, data, legend, labels, colors, path, window=1):
 
     for i, key in enumerate(keys):
         ax = plt.subplot(num_rows, num_cols, i + 1)
-        # ax.set_xlabel('steps')
-        # ax.set_ylabel(labels[i])
+        ax.set_xlabel('steps')
+        ax.set_ylabel(labels[i])
         ax.grid()
 
         lines = []

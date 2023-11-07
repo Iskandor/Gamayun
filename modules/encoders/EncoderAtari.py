@@ -47,7 +47,7 @@ class AtariStateEncoderSmall(nn.Module):
         return out
 
 
-class AtariStateEncoder(nn.Module):
+class AtariStateEncoderLarge(nn.Module):
 
     def __init__(self, input_shape, feature_dim, gain=0.5):
         super().__init__()
@@ -93,6 +93,77 @@ class AtariStateEncoder(nn.Module):
         return out
 
 
+class ResidualBlock(nn.Module):
+    def __init__(self, inplanes: int, planes: int, gain=sqrt(2)):
+        super().__init__()
+        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.downsample = None
+        if inplanes != planes:
+            self.downsample = nn.Sequential(
+                nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False),
+                nn.BatchNorm2d(planes),
+            )
+
+        init_orthogonal(self.conv1, gain)
+        init_orthogonal(self.conv2, gain)
+
+    def forward(self, x):
+        if self.downsample is not None:
+            identity = self.downsample(x)
+        else:
+            identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+
+class AtariStateEncoderResNet(nn.Module):
+
+    def __init__(self, input_shape, feature_dim, gain=sqrt(2)):
+        super().__init__()
+        self.feature_size = feature_dim
+        self.hidden_size = self.feature_size
+
+        self.input_channels = input_shape[0]
+        self.input_height = input_shape[1]
+        self.input_width = input_shape[2]
+
+        self.final_conv_size = 64 * (self.input_width // 4) * (self.input_height // 4)  # 36864
+
+        self.main = nn.Sequential(
+            nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            ResidualBlock(32, 64, gain=gain),
+            ResidualBlock(64, 64, gain=gain),
+            nn.Flatten(),
+            nn.Linear(self.final_conv_size, feature_dim)
+        )
+
+        # gain = nn.init.calculate_gain('relu')
+        init_orthogonal(self.main[0], gain)
+
+    def forward(self, inputs):
+        out = self.main(inputs)
+        return out
+
+
 class ST_DIMEncoderAtari(nn.Module):
     def __init__(self, input_shape, feature_dim, config):
         super(ST_DIMEncoderAtari, self).__init__()
@@ -102,7 +173,7 @@ class ST_DIMEncoderAtari(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
 
-        self.encoder = AtariStateEncoder(input_shape, feature_dim)
+        self.encoder = AtariStateEncoderLarge(input_shape, feature_dim)
         self.classifier1 = nn.Linear(self.encoder.hidden_size, self.encoder.local_layer_depth)  # x1 = global, x2=patch, n_channels = 32
         self.classifier2 = nn.Linear(self.encoder.local_layer_depth, self.encoder.local_layer_depth)
 
@@ -309,7 +380,7 @@ class BarlowTwinsEncoderAtari(nn.Module):
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
 
-        self.encoder = AtariStateEncoder(input_shape, feature_dim)
+        self.encoder = AtariStateEncoderLarge(input_shape, feature_dim)
         self.lam = 5e-3
 
         self.lam_mask = torch.maximum(torch.ones(self.feature_dim, self.feature_dim, device=self.config.device) * self.lam, torch.eye(self.feature_dim, self.feature_dim, device=self.config.device))
@@ -362,9 +433,10 @@ class VICRegEncoderAtari(nn.Module):
         self.feature_dim = feature_dim
         self.projector_dim = feature_dim * 2
 
-        self.encoder = AtariStateEncoderSmall(input_shape, feature_dim, gain=0.5)
+        self.encoder = AtariStateEncoderLarge(input_shape, feature_dim, gain=0.5)
 
         self.projector = nn.Sequential(
+            nn.ReLU(),
             nn.Linear(self.feature_dim, self.projector_dim),
             nn.ReLU(),
             nn.Linear(self.projector_dim, self.projector_dim)
@@ -375,9 +447,9 @@ class VICRegEncoderAtari(nn.Module):
 
     def loss_function(self, states, next_states):
         x_a = states[:, 0, :, :].unsqueeze(1)
-        # x_b = next_states[:, 0, :, :].unsqueeze(1)
-        index = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
-        x_b = torch.gather(next_states, 1, index)
+        x_b = next_states[:, 0, :, :].unsqueeze(1)
+        # index_b = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
+        # x_b = torch.gather(next_states, 1, index_b)
 
         # y_a = self.augment(x_a)
         # y_b = self.augment(x_b)
@@ -409,10 +481,9 @@ class VICRegEncoderAtari(nn.Module):
         n, d = z.shape
         mu = z.mean(0)
         cov = torch.matmul((z - mu).t(), z - mu) / (n - 1)
-        cov_loss = cov.pow(2).sum() - cov.pow(2).diag().sum() / d
+        cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / d
 
         return cov_loss
-
 
     @staticmethod
     def augment(x, p=0.5):
@@ -451,4 +522,3 @@ class AMIEncoderAtari(nn.Module):
         loss = nn.functional.cross_entropy(logits, target, reduction='mean')
 
         return loss
-
