@@ -21,6 +21,7 @@ class PPOAgent:
         self.step_counter = StepCounter(int(config.steps * 1e6))
         self.reward_avg = RunningAverageWindow(100)
         self.time_estimator = PPOTimeEstimator(self.step_counter.limit)
+        self.best_agent_score = 0.
 
     def get_action(self, state):
         value, action, probs = self.network(state)
@@ -42,13 +43,19 @@ class PPOAgent:
     def step(self, env, agent_state):
         raise NotImplementedError
 
-    def check_terminal_states(self, env, agent_state, analysis, trial):
+    def check_terminal_states(self, env, agent_state, analysis, trial, name):
         env_indices = numpy.nonzero(numpy.squeeze(agent_state.done, axis=1))[0]
         stats = analysis.reset(env_indices)
         self.step_counter.update(self.config.n_env)
 
         for i, index in enumerate(env_indices):
+            agent_score = stats['re'].sum[i] / stats['re'].step[i]
             self.reward_avg.update(stats['re'].sum[i])
+
+            if self.best_agent_score < agent_score:
+                self.best_agent_score = agent_score
+                self.save('./models/{0:s}'.format(name))
+
             self.print_step_info(trial, stats, i)
             print(self.time_estimator)
             agent_state.next_state[i], metadata = env.reset(index)
@@ -73,14 +80,12 @@ class PPOAgent:
 
         while self.step_counter.running():
             self.step(env, agent_state)
-            self.check_terminal_states(env, agent_state, analytic, trial)
+            self.check_terminal_states(env, agent_state, analytic, trial, name)
             self.train(agent_state)
             self.update_analysis(agent_state, analytic)
             self.time_estimator.update(self.config.n_env)
 
         print('Saving data...{0:s}'.format(name))
-
-        self.save('./models/{0:s}'.format(name))
         analytic.reset(numpy.array(range(self.config.n_env)))
         save_data = analytic.finalize()
         numpy.save('ppo_{0:s}'.format(name), save_data)
@@ -92,10 +97,3 @@ class PPOAgent:
 
     def load(self, path):
         self.network.load_state_dict(torch.load(path + '.pth', map_location='cpu'))
-
-
-class PPOSimpleAgent(PPOAgent):
-    def __init__(self, state_dim, action_dim, config, action_type):
-        super().__init__(state_dim, action_dim, config, action_type)
-        self.network = PPOSimpleNetwork(state_dim, action_dim, config, head=action_type).to(config.device)
-        self.algorithm = self.init_algorithm(config, self.memory, config.n_env, action_type)

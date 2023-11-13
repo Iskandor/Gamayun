@@ -40,7 +40,7 @@ def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_
             window)
 
         for index, key in enumerate(config):
-            if int(key['id']) in plot_details:
+            if key['id'] in plot_details:
                 d = data[index]
                 model = key['model']
                 id = key['id']

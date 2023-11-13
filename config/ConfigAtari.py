@@ -71,7 +71,8 @@ class ConfigMontezumaSND(ConfigAtari):
 
     def run(self, trial):
         trial += self.shift
-        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'big_static', trial)
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'big_full_random_aug', trial)
+        print(name)
 
         agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
         agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())

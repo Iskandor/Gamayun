@@ -446,15 +446,18 @@ class VICRegEncoderAtari(nn.Module):
         return self.encoder(state)
 
     def loss_function(self, states, next_states):
-        x_a = states[:, 0, :, :].unsqueeze(1)
-        x_b = next_states[:, 0, :, :].unsqueeze(1)
-        # index_b = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
-        # x_b = torch.gather(next_states, 1, index_b)
+        # x_a = states[:, 0, :, :].unsqueeze(1)
+        # x_b = next_states[:, 0, :, :].unsqueeze(1)
 
-        # y_a = self.augment(x_a)
-        # y_b = self.augment(x_b)
-        y_a = x_a
-        y_b = x_b
+        index_a = torch.randint(low=0, high=4, size=(states.shape[0], 1, 1, 1), device=states.device).expand(-1, -1, states.shape[2], states.shape[3])
+        index_b = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
+        x_a = torch.gather(states, 1, index_a)
+        x_b = torch.gather(next_states, 1, index_b)
+
+        y_a = self.augment(x_a)
+        y_b = self.augment(x_b)
+        # y_a = x_a
+        # y_b = x_b
         z_a = self.encoder(y_a)
         z_b = self.encoder(y_b)
 
