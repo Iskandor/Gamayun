@@ -1,7 +1,7 @@
 import torch
 
 from agents import TYPE
-from agents.PPOAtariAgent import PPOAtariAgent, PPOAtariRNDAgent, PPOAtariSNDAgent
+from agents.PPOAtariAgent import PPOAtariAgent, PPOAtariRNDAgent, PPOAtariSNDAgent, PPOAtariICMAgent, PPOAtariSPAgent
 from config.ConfigBase import ConfigPPO
 from utils.AtariWrapper import WrapperHardAtari
 from utils.MultiEnvWrapper import MultiEnvParallel
@@ -76,3 +76,34 @@ class ConfigMontezumaSND(ConfigAtari):
 
         agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
         agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())
+
+
+class ConfigMontezumaICM(ConfigAtari):
+    def __init__(self, num_threads, device, shift):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+
+        self.motivation_lr = 1e-4
+        self.motivation_eta = 1
+
+    def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
+
+        agent = PPOAtariICMAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
+        agent.training_loop(self.env, name, trial, PPOAtariICMAgent.AgentState())
+
+
+class ConfigMontezumaSP(ConfigAtari):
+    def __init__(self, num_threads, device, shift):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+
+        self.motivation_lr = 1e-4
+        self.motivation_eta = 1
+
+    def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
+
+        agent = PPOAtariSPAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
+        agent.training_loop(self.env, name, trial, PPOAtariSPAgent.AgentState())
+

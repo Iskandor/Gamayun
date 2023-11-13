@@ -4,11 +4,10 @@ import torch
 
 
 class ForwardModelMotivation:
-    def __init__(self, network, lr, eta=1, variant='A', device='cpu'):
+    def __init__(self, network, lr, eta=1, device='cpu'):
         self._network = network
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
         self._eta = eta
-        self._variant = variant
         self._device = device
 
     def train(self, memory, indices):
@@ -27,7 +26,7 @@ class ForwardModelMotivation:
                 self._optimizer.step()
 
             end = time.time()
-            # print("Forward model motivation training time {0:.2f}s".format(end - start))
+            print("Forward model motivation training time {0:.2f}s".format(end - start))
 
     def error(self, state0, action, state1):
         return self._network.error(state0, action, state1)
@@ -42,11 +41,9 @@ class ForwardModelMotivation:
         return self.reward(states, actions, next_states)
 
     def reward(self, state0=None, action=None, state1=None, error=None):
-        reward = 0
         if error is None:
-            error = self.error(state0, action, state1)
-
-        if self._variant == 'A':
-            reward = torch.tanh(error)
+            reward = self.error(state0, action, state1)
+        else:
+            reward = error
 
         return reward * self._eta

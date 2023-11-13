@@ -63,7 +63,7 @@ class ICMModelAtari(nn.Module):
     def __init__(self, input_shape, feature_dim, action_dim, config):
         super(ICMModelAtari, self).__init__()
 
-        # calar that weighs the inverse model loss against the forward model loss
+        # scalar that weighs the inverse model loss against the forward model loss
         self.scaling_factor = 0.2
 
         # encoder
