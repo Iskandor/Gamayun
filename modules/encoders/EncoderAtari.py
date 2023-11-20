@@ -61,13 +61,13 @@ class AtariStateEncoderLarge(nn.Module):
         self.final_conv_size = 128 * (self.input_width // 8) * (self.input_height // 8)
         self.main = nn.Sequential(
             nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Flatten(),
             nn.Linear(self.final_conv_size, feature_dim)
         )
@@ -431,15 +431,18 @@ class VICRegEncoderAtari(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
-        self.projector_dim = feature_dim * 2
+        self.projector_dim = feature_dim * 4
 
         self.encoder = AtariStateEncoderLarge(input_shape, feature_dim, gain=0.5)
 
-        self.projector = nn.Sequential(
-            nn.ReLU(),
-            nn.Linear(self.feature_dim, self.projector_dim),
-            nn.ReLU(),
-            nn.Linear(self.projector_dim, self.projector_dim)
+        self.augmentation = transforms.Compose(
+            [
+                transforms.RandomResizedCrop(size=96, scale=(0.2, 1.0), antialias=True),
+                transforms.RandomHorizontalFlip(0.5),
+                transforms.RandomApply([transforms.GaussianBlur(3)], p=0.5),
+                transforms.RandomSolarize(0.5, p=0.2),
+                transforms.RandomErasing()
+            ]
         )
 
     def forward(self, state):
@@ -454,10 +457,10 @@ class VICRegEncoderAtari(nn.Module):
         x_a = torch.gather(states, 1, index_a)
         x_b = torch.gather(next_states, 1, index_b)
 
-        y_a = self.augment(x_a)
-        y_b = self.augment(x_b)
-        # y_a = x_a
-        # y_b = x_b
+        # y_a = self.augmentation(x_a)
+        # y_b = self.augmentation(x_b)
+        y_a = x_a
+        y_b = x_b
         z_a = self.encoder(y_a)
         z_b = self.encoder(y_b)
 
@@ -494,7 +497,6 @@ class VICRegEncoderAtari(nn.Module):
         ax = aug_random_apply(ax, p, aug_pixelate)
         ax = aug_random_apply(ax, p, aug_mask_tiles)
         ax = aug_random_apply(ax, p, aug_noise)
-
         return ax
 
 

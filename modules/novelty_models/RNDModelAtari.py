@@ -473,9 +473,9 @@ class VICRegModelAtari(nn.Module):
         self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
 
         self.learned_projection = nn.Sequential(
-            nn.ELU(),
+            nn.GELU(),
             nn.Linear(self.feature_dim, self.feature_dim),
-            nn.ELU(),
+            nn.GELU(),
             nn.Linear(self.feature_dim, self.feature_dim)
         )
 
