@@ -19,7 +19,6 @@ class ConfigAtari(ConfigPPO):
         self.input_shape = None
         self.action_dim = None
         self.env = None
-        self.experiment = None
 
         self.init_environment()
 
@@ -29,9 +28,6 @@ class ConfigAtari(ConfigPPO):
 
         self.input_shape = self.env.observation_space.shape
         self.action_dim = self.env.action_space.n
-
-    def encode_state(self, state):
-        return torch.tensor(state, dtype=torch.float32, device=self.device)
 
 
 class ConfigMontezumaBaseline(ConfigAtari):
@@ -66,12 +62,12 @@ class ConfigMontezumaSND(ConfigAtari):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
-        self.motivation_eta = 1
+        self.motivation_eta = 0.5
         self.type = 'vicreg'
 
     def run(self, trial):
         trial += self.shift
-        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'std_aug2', trial)
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'std', trial)
         print(name)
 
         agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
@@ -93,12 +89,13 @@ class ConfigMontezumaICM(ConfigAtari):
         agent.training_loop(self.env, name, trial, PPOAtariICMAgent.AgentState())
 
 
-class ConfigMontezumaSP(ConfigAtari):
+class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
-        self.motivation_eta = 1
+        self.motivation_eta = .25
+        self.type = 'seer'
 
     def run(self, trial):
         trial += self.shift

@@ -431,7 +431,7 @@ class VICRegEncoderAtari(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
-        self.projector_dim = feature_dim * 4
+        self.sample_shift = 4
 
         self.encoder = AtariStateEncoderLarge(input_shape, feature_dim, gain=0.5)
 
@@ -449,13 +449,17 @@ class VICRegEncoderAtari(nn.Module):
         return self.encoder(state)
 
     def loss_function(self, states, next_states):
-        # x_a = states[:, 0, :, :].unsqueeze(1)
-        # x_b = next_states[:, 0, :, :].unsqueeze(1)
+        batch_size = states.shape[0]
+        #
+        # index_a = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
+        index_b = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
+        # index_a += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
+        index_b += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
+        # index_a = index_a.clip_(max=batch_size - 1)
+        index_b = index_b.clip_(max=batch_size - 1)
 
-        index_a = torch.randint(low=0, high=4, size=(states.shape[0], 1, 1, 1), device=states.device).expand(-1, -1, states.shape[2], states.shape[3])
-        index_b = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
-        x_a = torch.gather(states, 1, index_a)
-        x_b = torch.gather(next_states, 1, index_b)
+        x_a = states
+        x_b = next_states[index_b]
 
         # y_a = self.augmentation(x_a)
         # y_b = self.augmentation(x_b)

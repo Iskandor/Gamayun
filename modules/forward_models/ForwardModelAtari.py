@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 
 from analytic.ResultCollector import ResultCollector
 from modules import init_orthogonal
-from modules.encoders.EncoderAtari import ST_DIMEncoderAtari
+from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, VICRegEncoderAtari
 
 
 class SPModelAtari(nn.Module):
@@ -151,3 +152,66 @@ class ICMModelAtari(nn.Module):
                                  forward_loss=forward_loss.unsqueeze(-1).detach().cpu())
 
         return loss
+
+
+class SEERModelAtari(nn.Module):
+    def __init__(self, input_shape, feature_dim, action_dim, config):
+        super(SEERModelAtari, self).__init__()
+
+        input_channels = input_shape[0]
+        input_height = input_shape[1]
+        input_width = input_shape[2]
+        self.encoder = VICRegEncoderAtari((input_channels, input_height, input_width), feature_dim, config)
+
+        self.action_projection = nn.Sequential(
+            nn.Linear(action_dim, feature_dim // 2),
+            nn.GELU(),
+            nn.Linear(feature_dim // 2, feature_dim),
+            nn.GELU(),
+            nn.Linear(feature_dim, feature_dim),
+        )
+
+        init_orthogonal(self.action_projection[0], np.sqrt(2))
+        init_orthogonal(self.action_projection[2], np.sqrt(2))
+        init_orthogonal(self.action_projection[4], np.sqrt(2))
+
+        self.state_projection = nn.Sequential(
+            nn.Linear(feature_dim, feature_dim),
+            nn.GELU(),
+            nn.Linear(feature_dim, feature_dim),
+        )
+
+        init_orthogonal(self.state_projection[0], np.sqrt(2))
+        init_orthogonal(self.state_projection[2], np.sqrt(2))
+
+    def forward(self, state, action):
+        encoded_state = self.state_projection(self.encoder(self.preprocess(state)).detach())
+        encoded_action = self.action_projection(action)
+        predicted_state = encoded_state + encoded_action
+        return predicted_state
+
+    def error(self, state, action, next_state):
+        with torch.no_grad():
+            predicted_state = self(state, action)
+            target = self.encoder(self.preprocess(next_state))
+            error = F.mse_loss(predicted_state, target, reduction='none').mean(dim=1, keepdim=True)
+
+        return error
+
+    def loss_function(self, state, action, next_state):
+        loss_target = self.encoder.loss_function(state, next_state)
+
+        predicted_state = self(state, action)
+        target = self.encoder(self.preprocess(next_state))
+        prediction_loss = nn.functional.mse_loss(predicted_state, target.detach())
+
+        loss = loss_target + prediction_loss
+        ResultCollector().update(loss_prediction=loss.unsqueeze(-1).detach().cpu(),
+                                 loss_target=loss_target.unsqueeze(-1).detach().cpu(),
+                                 prediction_loss=prediction_loss.unsqueeze(-1).detach().cpu())
+        return loss
+
+    @staticmethod
+    def preprocess(state):
+        # return state[:, 0, :, :].unsqueeze(1)
+        return state

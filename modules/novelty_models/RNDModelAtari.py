@@ -504,7 +504,7 @@ class VICRegModelAtari(nn.Module):
 
         loss_prediction = nn.functional.mse_loss(prediction, target.detach(), reduction='mean')
 
-        loss_target = self.target_model.loss_function(state, next_state)
+        loss_target = self.target_model.loss_function(self.preprocess(state), self.preprocess(next_state))
 
         analytic = ResultCollector()
         analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach())

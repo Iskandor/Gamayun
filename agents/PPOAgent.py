@@ -23,6 +23,9 @@ class PPOAgent:
         self.time_estimator = PPOTimeEstimator(self.step_counter.limit)
         self.best_agent_score = 0.
 
+    def encode_state(self, state):
+        raise NotImplementedError
+
     def get_action(self, state):
         value, action, probs = self.network(state)
 
@@ -74,7 +77,7 @@ class PPOAgent:
         for i in range(self.config.n_env):
             s[i], metadata = env.reset(i)
 
-        agent_state.state = self.config.encode_state(s)
+        agent_state.state = self.encode_state(s)
 
         analytic = self.initialize_analysis()
 

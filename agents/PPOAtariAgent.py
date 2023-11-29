@@ -34,6 +34,9 @@ class PPOAtariAgent(PPOAgent):
                              config.beta, config.gamma, ppo_epochs=config.ppo_epochs, n_env=config.n_env,
                              device=config.device, motivation=False)
 
+    def encode_state(self, state):
+        return torch.tensor(state, dtype=torch.float32, device=self.config.device)
+
     def initialize_analysis(self):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), score=(1,))
@@ -64,7 +67,7 @@ class PPOAtariAgent(PPOAgent):
         analysis.end_step()
 
     def train(self, agent_state):
-        agent_state.next_state = self.config.encode_state(agent_state.next_state)
+        agent_state.next_state = self.encode_state(agent_state.next_state)
         agent_state.reward = torch.tensor(agent_state.reward, dtype=torch.float32)
         agent_state.done = torch.tensor(1 - agent_state.done, dtype=torch.float32)
 
@@ -118,7 +121,7 @@ class PPOAtariRNDAgent(PPOAtariAgent):
         agent_state.ext_reward = torch.tensor(agent_state.reward, dtype=torch.float32)
         agent_state.int_reward = self.motivation.reward(agent_state.state).cpu().clip(0.0, 1.0)
 
-        agent_state.next_state = self.config.encode_state(agent_state.next_state)
+        agent_state.next_state = self.encode_state(agent_state.next_state)
         agent_state.reward = torch.cat([agent_state.ext_reward, agent_state.int_reward], dim=1)
         agent_state.done = torch.tensor(1 - agent_state.done, dtype=torch.float32)
 
@@ -134,7 +137,7 @@ class PPOAtariRNDAgent(PPOAtariAgent):
         agent_state.state = agent_state.next_state
 
 
-class PPOAtariICMAgent(PPOAgent):
+class PPOAtariICMAgent(PPOAtariAgent):
     class AgentState(PPOAtariAgent.AgentState):
         def __init__(self):
             self.ext_reward = None
@@ -196,7 +199,7 @@ class PPOAtariICMAgent(PPOAgent):
         analysis.end_step()
 
     def train(self, agent_state):
-        agent_state.next_state = self.config.encode_state(agent_state.next_state)
+        agent_state.next_state = self.encode_state(agent_state.next_state)
 
         agent_state.ext_reward = torch.tensor(agent_state.reward, dtype=torch.float32)
         agent_state.int_reward = self.motivation.reward(agent_state.state, agent_state.action, agent_state.next_state).cpu().clip(0.0, 1.0)
@@ -299,7 +302,7 @@ class PPOAtariSNDAgent(PPOAtariAgent):
         agent_state.ext_reward = torch.tensor(agent_state.reward, dtype=torch.float32)
         agent_state.int_reward = self.motivation.reward(agent_state.state).cpu().clip(0.0, 1.0)
 
-        agent_state.next_state = self.config.encode_state(agent_state.next_state)
+        agent_state.next_state = self.encode_state(agent_state.next_state)
         agent_state.reward = torch.cat([agent_state.ext_reward, agent_state.int_reward], dim=1)
         agent_state.done = torch.tensor(1 - agent_state.done, dtype=torch.float32)
 
