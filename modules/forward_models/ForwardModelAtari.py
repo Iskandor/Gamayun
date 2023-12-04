@@ -158,36 +158,26 @@ class SEERModelAtari(nn.Module):
     def __init__(self, input_shape, feature_dim, action_dim, config):
         super(SEERModelAtari, self).__init__()
 
-        input_channels = input_shape[0]
+        input_channels = 1
         input_height = input_shape[1]
         input_width = input_shape[2]
         self.encoder = VICRegEncoderAtari((input_channels, input_height, input_width), feature_dim, config)
 
-        self.action_projection = nn.Sequential(
-            nn.Linear(action_dim, feature_dim // 2),
+        self.forward_model = nn.Sequential(
+            nn.Linear(feature_dim + action_dim, feature_dim),
             nn.GELU(),
-            nn.Linear(feature_dim // 2, feature_dim),
-            nn.GELU(),
-            nn.Linear(feature_dim, feature_dim),
-        )
-
-        init_orthogonal(self.action_projection[0], np.sqrt(2))
-        init_orthogonal(self.action_projection[2], np.sqrt(2))
-        init_orthogonal(self.action_projection[4], np.sqrt(2))
-
-        self.state_projection = nn.Sequential(
             nn.Linear(feature_dim, feature_dim),
             nn.GELU(),
             nn.Linear(feature_dim, feature_dim),
         )
 
-        init_orthogonal(self.state_projection[0], np.sqrt(2))
-        init_orthogonal(self.state_projection[2], np.sqrt(2))
+        init_orthogonal(self.forward_model[0], np.sqrt(2))
+        init_orthogonal(self.forward_model[2], np.sqrt(2))
+        init_orthogonal(self.forward_model[4], np.sqrt(2))
 
     def forward(self, state, action):
-        encoded_state = self.state_projection(self.encoder(self.preprocess(state)).detach())
-        encoded_action = self.action_projection(action)
-        predicted_state = encoded_state + encoded_action
+        encoded_state = self.encoder(self.preprocess(state)).detach()
+        predicted_state = self.forward_model(torch.cat([encoded_state, action], dim=1))
         return predicted_state
 
     def error(self, state, action, next_state):
@@ -199,7 +189,7 @@ class SEERModelAtari(nn.Module):
         return error
 
     def loss_function(self, state, action, next_state):
-        loss_target = self.encoder.loss_function(state, next_state)
+        loss_target = self.encoder.loss_function(self.preprocess(state), self.preprocess(next_state))
 
         predicted_state = self(state, action)
         target = self.encoder(self.preprocess(next_state))
@@ -213,5 +203,5 @@ class SEERModelAtari(nn.Module):
 
     @staticmethod
     def preprocess(state):
-        # return state[:, 0, :, :].unsqueeze(1)
-        return state
+        return state[:, 0, :, :].unsqueeze(1)
+        # return state

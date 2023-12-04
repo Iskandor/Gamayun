@@ -8,7 +8,7 @@ import numpy as np
 from analytic.ResultCollector import ResultCollector
 from modules import init_orthogonal
 from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari, AtariStateEncoderLarge, \
-    AtariStateEncoderResNet
+    AtariStateEncoderResNet, SpacVICRegEncoderAtari
 from utils.RunningAverage import RunningStatsSimple
 
 
@@ -524,6 +524,12 @@ class VICRegModelAtari(nn.Module):
     def update_state_average(self, state):
         self.state_average.update(state)
 
+
+class SpacVICRegModelAtari(VICRegModelAtari):
+    def __init__(self, input_shape, action_dim, config):
+        super(SpacVICRegModelAtari, self).__init__(input_shape, action_dim, config)
+
+        self.target_model = SpacVICRegEncoderAtari(self.input_shape, self.feature_dim, config)
 
 class VINVModelAtari(VICRegModelAtari):
     def __init__(self, input_shape, action_dim, config):

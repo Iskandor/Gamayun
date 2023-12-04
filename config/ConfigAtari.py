@@ -74,6 +74,23 @@ class ConfigMontezumaSND(ConfigAtari):
         agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())
 
 
+class ConfigMontezumaSNDSpac(ConfigAtari):
+    def __init__(self, num_threads, device, shift):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+
+        self.motivation_lr = 1e-4
+        self.motivation_eta = .25
+        self.type = 'spacvicreg'
+
+    def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'std_spacvicreg', trial)
+        print(name)
+
+        agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
+        agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())
+
+
 class ConfigMontezumaICM(ConfigAtari):
     def __init__(self, num_threads, device, shift):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
@@ -94,7 +111,7 @@ class ConfigMontezumaSEER(ConfigAtari):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
-        self.motivation_eta = .25
+        self.motivation_eta = .1
         self.type = 'seer'
 
     def run(self, trial):

@@ -504,6 +504,105 @@ class VICRegEncoderAtari(nn.Module):
         return ax
 
 
+class SpacVICRegEncoderAtari(nn.Module):
+    def __init__(self, input_shape, feature_dim, config):
+        super(SpacVICRegEncoderAtari, self).__init__()
+
+        self.config = config
+        self.input_channels = input_shape[0]
+        self.input_height = input_shape[1]
+        self.input_width = input_shape[2]
+        self.feature_dim = feature_dim
+
+        self.encoder = AtariStateEncoderLarge(input_shape, feature_dim, gain=0.5)
+
+        self.spatial_projection = nn.Linear(self.encoder.hidden_size, self.encoder.local_layer_depth)
+
+    def forward(self, state):
+        return self.encoder(state)
+
+    def loss_function(self, states, next_states):
+        # x_a = states[:, 0, :, :].unsqueeze(1)
+        # x_b = next_states[:, 0, :, :].unsqueeze(1)
+
+        index_a = torch.randint(low=0, high=4, size=(states.shape[0], 1, 1, 1), device=states.device).expand(-1, -1, states.shape[2], states.shape[3])
+        index_b = torch.randint(low=0, high=4, size=(next_states.shape[0], 1, 1, 1), device=next_states.device).expand(-1, -1, next_states.shape[2], next_states.shape[3])
+        x_a = torch.gather(states, 1, index_a)
+        x_b = torch.gather(next_states, 1, index_b)
+
+        # y_a = self.augment(x_a)
+        # y_b = self.augment(x_b)
+        y_a = x_a
+        y_b = x_b
+        z_a = self.encoder(y_a, fmaps=True)
+        z_b = self.encoder(y_b, fmaps=True)
+
+        z_a_f5, z_a = z_a['f5'], z_a['out']
+        z_b_f5, z_b = z_b['f5'], z_b['out']
+
+        # global loss
+        inv_loss = self.invariance(z_a, z_b)
+        var_loss = self.variance(z_a) + self.variance(z_b)
+        cov_loss = self.covariance(z_a) + self.covariance(z_b)
+
+        la = 1.
+        mu = 1.
+        nu = 1. / 25
+
+        global_loss = la * inv_loss + mu * var_loss + nu * cov_loss
+
+        # spatial_loss
+
+        # spatial_loss = 0
+
+        sy = z_a_f5.size(1)
+        sx = z_a_f5.size(2)
+        N = z_a_f5.size(0)
+
+        p_a = self.spatial_projection(z_a).unsqueeze(1).repeat(1, sy * sx, 1)
+        p_b = self.spatial_projection(z_b).unsqueeze(1).repeat(1, sy * sx, 1)
+        s_a = z_a_f5.reshape(N, sy * sx, -1)
+        s_b = z_b_f5.reshape(N, sy * sx, -1)
+
+        spatial_inv_loss = self.invariance(p_a, s_a) + self.invariance(p_b, s_b)
+        # spatial_var_loss = self.variance(s_a, dim=1).mean() + self.variance(s_b).mean()
+        # spatial_cov_loss = self.covariance(s_a)  # + self.covariance(z_b)
+
+        return global_loss + spatial_inv_loss
+
+    @staticmethod
+    def variance(z, gamma=1, dim=0):
+        return F.relu(gamma - z.std(dim)).mean(dim)
+
+    @staticmethod
+    def invariance(z1, z2):
+        return F.mse_loss(z1, z2)
+
+    @staticmethod
+    def covariance(z):
+        if len(z.shape) == 3:
+            n, f, d = z.shape
+            mu = z.mean(dim=1, keepdim=True)
+            cov = torch.bmm((z - mu).t(), z - mu) / (n - 1)
+            cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum(1) / d
+        else:
+            n, d = z.shape
+            mu = z.mean()
+            cov = torch.matmul((z - mu).t(), z - mu) / (n - 1)
+            cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / d
+
+        return cov_loss
+
+    @staticmethod
+    def augment(x, p=0.5):
+        ax = x
+        ax = aug_random_apply(ax, p, aug_pixelate)
+        ax = aug_random_apply(ax, p, aug_mask_tiles)
+        ax = aug_random_apply(ax, p, aug_noise)
+
+        return ax
+
+
 class AMIEncoderAtari(nn.Module):
     def __init__(self, input_shape, action_dim, config):
         super(AMIEncoderAtari, self).__init__()

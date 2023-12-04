@@ -154,7 +154,7 @@ class PPOAtariICMAgent(PPOAtariAgent):
 
     def get_action(self, state):
         value, action, probs = self.network(state)
-        features = self.network.forward_model.encoder(state)
+        features = self.network.forward_model.encoder(self.network.forward_model.preprocess(state))
 
         return features.detach(), value.detach(), action, probs.detach()
 
