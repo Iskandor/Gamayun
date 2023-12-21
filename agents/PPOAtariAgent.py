@@ -96,6 +96,7 @@ class PPOAtariRNDAgent(PPOAtariAgent):
         analysis.init(self.config.n_env, re=(1,), score=(1,), ri=(1,))
         metric = NoveltyMetric(self.network.input_shape[1],
                                self.network.input_shape[2],
+                               NoveltyMetric.Greyscale,
                                self.network.rnd_model.learned_model,
                                self.network.rnd_model.target_model,
                                self.config.batch_size,
@@ -272,6 +273,7 @@ class PPOAtariSNDAgent(PPOAtariAgent):
         analysis.init(self.config.n_env, re=(1,), score=(1,), ri=(1,), feature_space=(1,))
         metric = NoveltyMetric(self.network.input_shape[1],
                                self.network.input_shape[2],
+                               NoveltyMetric.Greyscale,
                                self.network.cnd_model.learned_model,
                                self.network.cnd_model.target_model,
                                self.config.batch_size,
