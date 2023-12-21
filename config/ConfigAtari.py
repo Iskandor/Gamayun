@@ -44,7 +44,7 @@ class ConfigMontezumaBaseline(ConfigAtari):
 
 class ConfigMontezumaRND(ConfigAtari):
     def __init__(self, num_threads, device, shift):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=0.5, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
         self.motivation_eta = 1
@@ -59,10 +59,10 @@ class ConfigMontezumaRND(ConfigAtari):
 
 class ConfigMontezumaSND(ConfigAtari):
     def __init__(self, num_threads, device, shift):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=0.5, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
-        self.motivation_eta = 0.5
+        self.motivation_eta = 0.25
         self.type = 'vicreg'
 
     def run(self, trial):
@@ -76,7 +76,7 @@ class ConfigMontezumaSND(ConfigAtari):
 
 class ConfigMontezumaSNDSpac(ConfigAtari):
     def __init__(self, num_threads, device, shift):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
         self.motivation_lr = 1e-4
         self.motivation_eta = .25

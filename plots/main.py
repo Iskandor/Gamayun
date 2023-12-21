@@ -1,3 +1,4 @@
+from analytic.metric.NoveltyMetric import NoveltyMetric
 from plots import plot
 from plots.analytic_table import compute_table_values
 import os
@@ -6,52 +7,60 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def atari_env(plots=True, tables=True):
+    # config = [
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'small_static', 'legend': 'small static'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'resnet_static', 'legend': 'resnet static'},
+    # ]
+    #
+    # if plots:
+    #     plot('montezuma_models', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_random', 'legend': 'big random'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random', 'legend': 'big full random'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random_aug', 'legend': 'big full random aug'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_aug2', 'legend': 'big full random aug 2'},
+    # ]
+    #
+    # if plots:
+    #     plot('montezuma_aug', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_projector_256', 'legend': 'big static projector 256'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static_projector_1024', 'legend': 'big static projector 1024'},
+    # ]
+    #
+    # if plots:
+    #     plot('montezuma_projector', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random', 'legend': 'big full random'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random_gelu', 'legend': 'big full random gelu'},
+    # ]
+    #
+    # if plots:
+    #     plot('montezuma_gelu', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
+    #
+    # config = [
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'std2'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random', 'legend': 'std'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_spac', 'legend': 'std spatial'},
+    # ]
+    #
+    # if plots:
+    #     plot('montezuma_spac', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
+
     config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'small_static', 'legend': 'small static'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'resnet_static', 'legend': 'resnet static'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_rnd', 'legend': 'RND'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_snd', 'legend': 'SND-VIC'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_snd_spac', 'legend': 'SND-SPAC'},
     ]
 
     if plots:
-        plot('montezuma_models', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_random', 'legend': 'big random'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random', 'legend': 'big full random'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random_aug', 'legend': 'big full random aug'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_aug2', 'legend': 'big full random aug 2'},
-    ]
-
-    if plots:
-        plot('montezuma_aug', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_projector_256', 'legend': 'big static projector 256'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static_projector_1024', 'legend': 'big static projector 1024'},
-    ]
-
-    if plots:
-        plot('montezuma_projector', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random', 'legend': 'big full random'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random_gelu', 'legend': 'big full random gelu'},
-    ]
-
-    if plots:
-        plot('montezuma_gelu', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'std2'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_full_random', 'legend': 'std'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_spac', 'legend': 'std spatial'},
-    ]
-
-    if plots:
-        plot('montezuma_spac', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
-
+        plot('montezuma_nm', config, labels=['intrinsic reward', 'features', 'novelty score'], keys=['ri', 'feature_space', NoveltyMetric.KEY], plot_details=[], window=10000)
 
 
 def procgen_env(plots=True, tables=True):

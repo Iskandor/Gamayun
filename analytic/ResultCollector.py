@@ -17,6 +17,7 @@ class ResultCollector:
             cls._instance.global_step = 0
             cls._instance.n_env = 0
 
+            cls._instance.metrics = {}
             cls._instance.collector_values = {}
             cls._instance.global_values = {}
         return cls._instance
@@ -27,6 +28,13 @@ class ResultCollector:
 
         for k in self.collector.keys:
             self.collector_values[k] = []
+
+    def add_metric(self, metric):
+        self.metrics[metric.KEY] = metric
+        self.global_values[metric.KEY] = {}
+
+    def get_metric(self, key):
+        return self.metrics[key]
 
     def add(self, **kwargs):
         for k in kwargs:
@@ -44,6 +52,13 @@ class ResultCollector:
                 self.global_values[k][self.global_step] = []
             self.global_values[k][self.global_step].append(kwargs[k].cpu().item())
 
+    def update_metric(self):
+        for m in self.metrics.values():
+            value = m.value()
+            if self.global_step not in self.global_values[m.KEY]:
+                self.global_values[m.KEY][self.global_step] = []
+            self.global_values[m.KEY][self.global_step].append(value.cpu().item())
+
     def reset(self, indices):
         result = None
         if len(indices) > 0:
@@ -51,6 +66,10 @@ class ResultCollector:
 
             for k in self.collector.keys:
                 self.collector_values[k].append((result[k].step, result[k].sum, result[k].max, result[k].mean, result[k].std))
+
+            for m in self.metrics.values():
+                value = m.value()
+                result[m.KEY] = value
 
         return result
 

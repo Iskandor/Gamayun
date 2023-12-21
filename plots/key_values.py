@@ -1,3 +1,5 @@
+from analytic.metric.NoveltyMetric import NoveltyMetric
+
 key_values = {
     're': 'sum',
     'score': 'sum',
@@ -7,6 +9,7 @@ key_values = {
     'loss_target': 'val',
     'loss_reg': 'val',
     'loss_target_norm': 'val',
+    NoveltyMetric.KEY: 'val',
     'state_space': 'mean',
     'feature_space': 'mean',
     'ext_value': 'mean',

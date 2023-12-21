@@ -2,3 +2,4 @@
 __pycache__
 models
 videos
+/analytic/metric/dataset/*.png

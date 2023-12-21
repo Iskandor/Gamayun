@@ -6,6 +6,7 @@ import torch.nn as nn
 import numpy as np
 
 from analytic.ResultCollector import ResultCollector
+from analytic.metric.NoveltyMetric import NoveltyMetric
 from modules import init_orthogonal
 from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari, AtariStateEncoderLarge, \
     AtariStateEncoderResNet, SpacVICRegEncoderAtari
@@ -95,6 +96,7 @@ class RNDModelAtari(nn.Module):
 
         analytic = ResultCollector()
         analytic.update(loss_prediction=loss.unsqueeze(-1).detach())
+        analytic.update_metric()
 
         return loss
 
@@ -211,6 +213,7 @@ class STDModelAtari(nn.Module):
         analytic = ResultCollector()
         analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), loss_target_norm=loss_target_norm.detach() * beta2,
                         loss_reg=loss_target_uniform.detach() * beta1)
+        analytic.update_metric()
 
         return loss_prediction * self.config.cnd_loss_pred + (loss_target + loss_target_uniform * beta1 + loss_target_norm * beta2) * self.config.cnd_loss_target
 
@@ -508,6 +511,7 @@ class VICRegModelAtari(nn.Module):
 
         analytic = ResultCollector()
         analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach())
+        analytic.update_metric()
 
         return loss_prediction + loss_target
 
@@ -564,6 +568,7 @@ class VINVModelAtari(VICRegModelAtari):
 
         analytic = ResultCollector()
         analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), inv_accuracy=accuracy.unsqueeze(-1).detach())
+        analytic.update_metric()
 
         return loss_prediction + loss_target + loss_inv
 
