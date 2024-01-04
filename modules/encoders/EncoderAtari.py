@@ -431,40 +431,16 @@ class VICRegEncoderAtari(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
         self.feature_dim = feature_dim
-        self.sample_shift = 4
 
         self.encoder = AtariStateEncoderLarge(input_shape, feature_dim, gain=0.5)
-
-        self.augmentation = transforms.Compose(
-            [
-                transforms.RandomResizedCrop(size=96, scale=(0.2, 1.0), antialias=True),
-                transforms.RandomHorizontalFlip(0.5),
-                transforms.RandomApply([transforms.GaussianBlur(3)], p=0.5),
-                transforms.RandomSolarize(0.5, p=0.2),
-                transforms.RandomErasing()
-            ]
-        )
 
     def forward(self, state):
         return self.encoder(state)
 
     def loss_function(self, states, next_states):
-        batch_size = states.shape[0]
-        #
-        # index_a = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
-        index_b = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
-        # index_a += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
-        index_b += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
-        # index_a = index_a.clip_(max=batch_size - 1)
-        index_b = index_b.clip_(max=batch_size - 1)
+        y_a = states
+        y_b = next_states
 
-        x_a = states
-        x_b = next_states[index_b]
-
-        # y_a = self.augmentation(x_a)
-        # y_b = self.augmentation(x_b)
-        y_a = x_a
-        y_b = x_b
         z_a = self.encoder(y_a)
         z_b = self.encoder(y_b)
 
@@ -502,6 +478,53 @@ class VICRegEncoderAtari(nn.Module):
         ax = aug_random_apply(ax, p, aug_mask_tiles)
         ax = aug_random_apply(ax, p, aug_noise)
         return ax
+
+
+class VICRegEncoderAtariV2(VICRegEncoderAtari):
+    def __init__(self, input_shape, feature_dim, config):
+        super(VICRegEncoderAtariV2, self).__init__(input_shape, feature_dim, config)
+
+        self.sample_shift = 4
+
+        self.augmentation = transforms.Compose(
+            [
+                transforms.RandomResizedCrop(size=96, scale=(0.2, 1.0), antialias=True),
+                transforms.RandomHorizontalFlip(0.5),
+                transforms.RandomApply([transforms.GaussianBlur(3)], p=0.5),
+                transforms.RandomSolarize(0.5, p=0.2),
+                transforms.RandomErasing()
+            ]
+        )
+
+    def loss_function(self, states, next_states):
+        batch_size = states.shape[0]
+        #
+        # index_a = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
+        index_b = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
+        # index_a += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
+        index_b += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
+        # index_a = index_a.clip_(max=batch_size - 1)
+        index_b = index_b.clip_(max=batch_size - 1)
+
+        x_a = states
+        x_b = next_states[index_b]
+
+        # y_a = self.augmentation(x_a)
+        # y_b = self.augmentation(x_b)
+        y_a = x_a
+        y_b = x_b
+        z_a = self.encoder(y_a)
+        z_b = self.encoder(y_b)
+
+        inv_loss = self.invariance(z_a, z_b)
+        var_loss = self.variance(z_a) + self.variance(z_b)
+        cov_loss = self.covariance(z_a) + self.covariance(z_b)
+
+        la = 1.
+        mu = 1.
+        nu = 1. / 25
+
+        return la * inv_loss + mu * var_loss + nu * cov_loss
 
 
 class SpacVICRegEncoderAtari(nn.Module):

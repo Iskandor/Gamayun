@@ -47,7 +47,7 @@ class RNDModelAtari(nn.Module):
         for param in self.target_model.parameters():
             param.requires_grad = False
 
-        self.model = nn.Sequential(
+        self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=8, stride=4, padding=2),
             nn.ELU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
@@ -62,12 +62,12 @@ class RNDModelAtari(nn.Module):
             nn.Linear(self.feature_dim, self.feature_dim)
         )
 
-        init_orthogonal(self.model[0], np.sqrt(2))
-        init_orthogonal(self.model[2], np.sqrt(2))
-        init_orthogonal(self.model[4], np.sqrt(2))
-        init_orthogonal(self.model[7], np.sqrt(2))
-        init_orthogonal(self.model[9], np.sqrt(2))
-        init_orthogonal(self.model[11], np.sqrt(2))
+        init_orthogonal(self.learned_model[0], np.sqrt(2))
+        init_orthogonal(self.learned_model[2], np.sqrt(2))
+        init_orthogonal(self.learned_model[4], np.sqrt(2))
+        init_orthogonal(self.learned_model[7], np.sqrt(2))
+        init_orthogonal(self.learned_model[9], np.sqrt(2))
+        init_orthogonal(self.learned_model[11], np.sqrt(2))
 
     def prepare_input(self, state):
         x = state - self.state_average.mean
@@ -75,7 +75,7 @@ class RNDModelAtari(nn.Module):
 
     def forward(self, state):
         x = self.prepare_input(state)
-        predicted_code = self.model(x)
+        predicted_code = self.learned_model(x)
         target_code = self.target_model(x)
         return predicted_code, target_code
 
@@ -124,7 +124,7 @@ class STDModelAtari(nn.Module):
 
         self.target_model = ST_DIMEncoderAtari(self.input_shape, self.feature_dim, config)
 
-        self.model = nn.Sequential(
+        self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
@@ -142,13 +142,13 @@ class STDModelAtari(nn.Module):
         )
 
         gain = 0.5
-        init_orthogonal(self.model[0], gain)
-        init_orthogonal(self.model[2], gain)
-        init_orthogonal(self.model[4], gain)
-        init_orthogonal(self.model[6], gain)
-        init_orthogonal(self.model[9], gain)
-        init_orthogonal(self.model[11], gain)
-        init_orthogonal(self.model[13], gain)
+        init_orthogonal(self.learned_model[0], gain)
+        init_orthogonal(self.learned_model[2], gain)
+        init_orthogonal(self.learned_model[4], gain)
+        init_orthogonal(self.learned_model[6], gain)
+        init_orthogonal(self.learned_model[9], gain)
+        init_orthogonal(self.learned_model[11], gain)
+        init_orthogonal(self.learned_model[13], gain)
 
     def preprocess(self, state):
         if self.config.cnd_preprocess == 0:
@@ -163,8 +163,8 @@ class STDModelAtari(nn.Module):
     def forward(self, state, fmaps=False):
         s = self.preprocess(state)
 
-        f5 = self.model[:6](s)
-        predicted_code = self.model[6:](f5)
+        f5 = self.learned_model[:6](s)
+        predicted_code = self.learned_model[6:](f5)
 
         if fmaps:
             target_code = self.target_model(s, fmaps)
@@ -264,7 +264,7 @@ class SNDVModelAtari(nn.Module):
 
         self.target_model = SNDVEncoderAtari(self.input_shape, self.feature_dim, config)
 
-        self.model = nn.Sequential(
+        self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 16, kernel_size=3, stride=2, padding=1),
             nn.ELU(),
 
@@ -287,13 +287,13 @@ class SNDVModelAtari(nn.Module):
         )
 
         gain = sqrt(2)
-        init_orthogonal(self.model[0], gain)
-        init_orthogonal(self.model[2], gain)
-        init_orthogonal(self.model[4], gain)
-        init_orthogonal(self.model[6], gain)
-        init_orthogonal(self.model[9], gain)
-        init_orthogonal(self.model[11], gain)
-        init_orthogonal(self.model[13], gain)
+        init_orthogonal(self.learned_model[0], gain)
+        init_orthogonal(self.learned_model[2], gain)
+        init_orthogonal(self.learned_model[4], gain)
+        init_orthogonal(self.learned_model[6], gain)
+        init_orthogonal(self.learned_model[9], gain)
+        init_orthogonal(self.learned_model[11], gain)
+        init_orthogonal(self.learned_model[13], gain)
 
     def preprocess(self, state):
         if self.config.cnd_preprocess == 0:
@@ -308,7 +308,7 @@ class SNDVModelAtari(nn.Module):
     def forward(self, state):
         s = self.preprocess(state)
 
-        predicted_code = self.model(s)
+        predicted_code = self.learned_model(s)
         target_code = self.target_model(s)
 
         return predicted_code, target_code
@@ -344,7 +344,7 @@ class SNDVModelAtari(nn.Module):
     def loss_function(self, state_batch, state, dropout=0.75):
         state_norm_t = self.preprocess(state_batch).detach()
 
-        features_predicted_t = self.model(state_norm_t)
+        features_predicted_t = self.learned_model(state_norm_t)
         features_target_t = self.target_model(state_norm_t).detach()
 
         loss_cnd = (features_target_t - features_predicted_t) ** 2
@@ -388,7 +388,7 @@ class BarlowTwinsModelAtari(nn.Module):
 
         self.target_model = BarlowTwinsEncoderAtari(self.input_shape, self.feature_dim, config)
 
-        self.model = nn.Sequential(
+        self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
@@ -406,19 +406,19 @@ class BarlowTwinsModelAtari(nn.Module):
         )
 
         gain = sqrt(2)
-        init_orthogonal(self.model[0], gain)
-        init_orthogonal(self.model[2], gain)
-        init_orthogonal(self.model[4], gain)
-        init_orthogonal(self.model[6], gain)
-        init_orthogonal(self.model[9], gain)
-        init_orthogonal(self.model[11], gain)
-        init_orthogonal(self.model[13], gain)
+        init_orthogonal(self.learned_model[0], gain)
+        init_orthogonal(self.learned_model[2], gain)
+        init_orthogonal(self.learned_model[4], gain)
+        init_orthogonal(self.learned_model[6], gain)
+        init_orthogonal(self.learned_model[9], gain)
+        init_orthogonal(self.learned_model[11], gain)
+        init_orthogonal(self.learned_model[13], gain)
 
     def preprocess(self, state):
         return state[:, 0, :, :].unsqueeze(1)
 
     def forward(self, state):
-        predicted_code = self.model(self.preprocess(state))
+        predicted_code = self.learned_model(self.preprocess(state))
         target_code = self.target_model(self.preprocess(state))
 
         return predicted_code, target_code

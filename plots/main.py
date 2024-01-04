@@ -7,6 +7,14 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def atari_env(plots=True, tables=True):
+    config = [
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std_long', 'legend': 'std long'},
+    ]
+
+    if plots:
+        plot('montezuma', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=[], window=10000)
+        plot('montezuma_detail', config, labels=['intrinsic reward', 'features', 'novelty score'], keys=['ri', 'feature_space', NoveltyMetric.KEY], plot_details=[], window=10000)
+
     # config = [
     #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'small_static', 'legend': 'small static'},
     #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
@@ -15,7 +23,7 @@ def atari_env(plots=True, tables=True):
     #
     # if plots:
     #     plot('montezuma_models', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
-    #
+
     # config = [
     #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_static', 'legend': 'big static'},
     #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'big_random', 'legend': 'big random'},
@@ -53,14 +61,14 @@ def atari_env(plots=True, tables=True):
     # if plots:
     #     plot('montezuma_spac', config, labels=['external reward', 'score', 'intrinsic reward', 'features'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
 
-    config = [
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_rnd', 'legend': 'RND'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_snd', 'legend': 'SND-VIC'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_snd_spac', 'legend': 'SND-SPAC'},
-    ]
-
-    if plots:
-        plot('montezuma_nm', config, labels=['intrinsic reward', 'features', 'novelty score'], keys=['ri', 'feature_space', NoveltyMetric.KEY], plot_details=[], window=10000)
+    # config = [
+    #     # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_rnd', 'legend': 'RND'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_snd', 'legend': 'SND-VIC'},
+    #     {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'nm_snd_spac', 'legend': 'SND-SPAC'},
+    # ]
+    #
+    # if plots:
+    #     plot('montezuma_nm', config, labels=['intrinsic reward', 'features', 'novelty score'], keys=['ri', 'feature_space', NoveltyMetric.KEY], plot_details=[], window=10000)
 
 
 def procgen_env(plots=True, tables=True):
