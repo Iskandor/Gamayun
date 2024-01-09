@@ -31,7 +31,9 @@ class ResultCollector:
 
     def add_metric(self, metric):
         self.metrics[metric.KEY] = metric
-        self.global_values[metric.KEY] = {}
+        for v in metric.VAL:
+            key = metric.KEY + v
+            self.global_values[key] = {}
 
     def get_metric(self, key):
         return self.metrics[key]
@@ -54,10 +56,12 @@ class ResultCollector:
 
     def update_metric(self):
         for m in self.metrics.values():
-            value = m.value()
-            if self.global_step not in self.global_values[m.KEY]:
-                self.global_values[m.KEY][self.global_step] = []
-            self.global_values[m.KEY][self.global_step].append(value.cpu().item())
+            values = m.values()
+            for i, v in enumerate(values):
+                key = m.KEY + m.VAL[i]
+                if self.global_step not in self.global_values[key]:
+                    self.global_values[key][self.global_step] = []
+                self.global_values[key][self.global_step].append(v.cpu().item())
 
     def reset(self, indices):
         result = None
@@ -68,8 +72,10 @@ class ResultCollector:
                 self.collector_values[k].append((result[k].step, result[k].sum, result[k].max, result[k].mean, result[k].std))
 
             for m in self.metrics.values():
-                value = m.value()
-                result[m.KEY] = value
+                values = m.values()
+                for i, v in enumerate(values):
+                    key = m.KEY + m.VAL[i]
+                    result[key] = v.cpu().item()
 
         return result
 

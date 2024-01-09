@@ -3,6 +3,7 @@ from math import sqrt
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 
 from analytic.ResultCollector import ResultCollector
@@ -535,6 +536,7 @@ class SpacVICRegModelAtari(VICRegModelAtari):
 
         self.target_model = SpacVICRegEncoderAtari(self.input_shape, self.feature_dim, config)
 
+
 class VINVModelAtari(VICRegModelAtari):
     def __init__(self, input_shape, action_dim, config):
         super(VINVModelAtari, self).__init__(input_shape, action_dim, config)
@@ -580,9 +582,9 @@ class TPModelAtari(VICRegModelAtari):
         self.terminal_model = nn.Sequential(
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
-            nn.Linear(self.feature_dim, self.feature_dim // 2),
+            nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
-            nn.Linear(self.feature_dim // 2, 2)
+            nn.Linear(self.feature_dim, 2)
         )
 
         gain = sqrt(2)
@@ -596,15 +598,27 @@ class TPModelAtari(VICRegModelAtari):
         done_logits = self.terminal_model(next_target)
 
         done_predicted = torch.argmax(torch.softmax(done_logits, dim=1), dim=1, keepdim=True)
-        accuracy = (done_predicted == done).float().mean() * 100
 
-        iota = 1.0
-        loss_terminal = nn.functional.cross_entropy(done_logits, done.flatten().long()) * iota
-        loss_prediction = nn.functional.mse_loss(prediction, target.detach(), reduction='mean')
+        negative = (done == 0).sum()
+        if negative == 0:
+            specificity = torch.zeros(1, device=self.config.device, dtype=torch.float32).squeeze()
+        else:
+            true_negative = ((done_predicted == done) * (done == 0)).float().sum()
+            specificity = true_negative / negative
+
+        iota = 0.2
+
+        weight_const = (done.shape[0] - torch.count_nonzero(done)) / done.shape[0]
+        weight = torch.ones(2, device=self.config.device, dtype=torch.float32)
+        weight[1] *= weight_const.item()
+
+        loss_terminal = F.cross_entropy(done_logits, done.flatten().long(), weight=weight, reduction='sum') * iota
+        loss_prediction = F.mse_loss(prediction, target.detach(), reduction='mean')
         loss_target = self.target_model.loss_function(self.preprocess(state), self.preprocess(next_state))
 
         analytic = ResultCollector()
-        analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), term_accuracy=accuracy.unsqueeze(-1).detach())
+        analytic.update(loss_prediction=loss_prediction.unsqueeze(-1).detach(), loss_target=loss_target.unsqueeze(-1).detach(), specificity=specificity.unsqueeze(-1).detach())
+        analytic.update_metric()
 
         return loss_prediction + loss_target + loss_terminal
 

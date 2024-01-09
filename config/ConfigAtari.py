@@ -74,7 +74,7 @@ class ConfigMontezumaSNDBaseline(ConfigAtari):
         agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())
 
 
-class ConfigMontezumaSND(ConfigAtari):
+class ConfigMontezumaSND_VIC(ConfigAtari):
     def __init__(self, num_threads, device, shift):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=0.5, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
 
@@ -90,6 +90,22 @@ class ConfigMontezumaSND(ConfigAtari):
         agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
         agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())
 
+
+class ConfigMontezumaSND_TP(ConfigAtari):
+    def __init__(self, num_threads, device, shift):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift)
+
+        self.motivation_lr = 1e-4
+        self.motivation_eta = 0.5
+        self.type = 'tp'
+
+    def run(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '02', trial)
+        print(name)
+
+        agent = PPOAtariSNDAgent(self.input_shape, self.action_dim, self, TYPE.discrete)
+        agent.training_loop(self.env, name, trial, PPOAtariSNDAgent.AgentState())
 
 class ConfigMontezumaSNDSpac(ConfigAtari):
     def __init__(self, num_threads, device, shift):

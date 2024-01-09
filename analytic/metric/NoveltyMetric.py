@@ -35,6 +35,7 @@ class NoveltyMetric:
     Greyscale = 'L'
     RGB = 'RGB'
     KEY = 'NoveltyMetric:V3'
+    VAL = ['_value', '_distance']
 
     def __init__(self, width, height, mode, predictor, target, batch_size, device):
         self.width = width
@@ -106,18 +107,21 @@ class NoveltyMetric:
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         return dataloader
 
-    def value(self):
+    def values(self):
         error = []
+        distance = []
 
         for sample in self.dataloader:
             with torch.no_grad():
                 zp, zt = self.predictor(sample.to(self.device)), self.target(sample.to(self.device))
 
             error.append(F.mse_loss(zp, zt))
+            distance.append(torch.cdist(zt, zt).mean())
 
         error = torch.stack(error).mean()
+        distance = torch.stack(distance).mean()
 
-        return error
+        return error, distance
 
 
 if __name__ == "__main__":

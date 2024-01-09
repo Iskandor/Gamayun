@@ -5,7 +5,7 @@ import torch
 
 from agents.PPOAgent import PPOAgent
 from algorithms.PPO import PPO
-from algorithms.ReplayBuffer import GenericTrajectoryBuffer
+from algorithms.ReplayBuffer import GenericTrajectoryBuffer, GenericReplayBuffer
 from analytic.ResultCollector import ResultCollector
 from analytic.metric.NoveltyMetric import NoveltyMetric
 from modules.PPO_AtariModules import PPOAtariNetwork, PPOAtariNetworkRND, PPOAtariNetworkSND, PPOAtariNetworkSP, PPOAtariNetworkICM
@@ -292,7 +292,7 @@ class PPOAtariSNDAgent(PPOAtariAgent):
 
     def print_step_info(self, trial, stats, i):
         print(
-            'Run {0:d} step {1:d}/{2:d} training [ext. reward {3:f} int. reward (max={4:f} mean={5:f} std={6:f}) steps {7:d}  mean reward {8:f} score {9:f} feature space (max={10:f} mean={11:f} std={12:f})] novelty score {13:f}'.format(
+            'Run {0:d} step {1:d}/{2:d} training [ext. reward {3:f} int. reward (max={4:f} mean={5:f} std={6:f}) steps {7:d}  mean reward {8:f} score {9:f}] feature space {10:f} novelty score {11:f} distance {12:f}'.format(
                 trial,
                 self.step_counter.steps,
                 self.step_counter.limit,
@@ -303,15 +303,15 @@ class PPOAtariSNDAgent(PPOAtariAgent):
                 int(stats['re'].step[i]),
                 self.reward_avg.value().item(),
                 stats['score'].sum[i],
-                stats['feature_space'].max[i],
                 stats['feature_space'].mean[i],
-                stats['feature_space'].std[i],
-                stats[NoveltyMetric.KEY]))
+                stats[NoveltyMetric.KEY + NoveltyMetric.VAL[0]],
+                stats[NoveltyMetric.KEY + NoveltyMetric.VAL[1]]))
 
     def update_analysis(self, agent_state, analysis):
+        feature_dist = torch.cdist(agent_state.features, agent_state.features).mean(dim=1, keepdim=True)
         analysis.update(re=agent_state.ext_reward,
                         ri=agent_state.int_reward,
-                        feature_space=agent_state.features.norm(p=2, dim=1, keepdim=True).cpu())
+                        feature_space=feature_dist)
 
         if 'raw_score' in agent_state.info:
             score = torch.tensor(agent_state.info['raw_score']).unsqueeze(-1)
