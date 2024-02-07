@@ -14,7 +14,9 @@ key_values = {
     'feature_space': 'mean',
     'ext_value': 'mean',
     'int_value': 'mean',
-    NoveltyMetric.KEY: 'val'
+    NoveltyMetric.KEY: 'val',
+    'augmentor_loss_var': 'val',
+    'augmentor_loss_con': 'val',
 }
 
 for v in NoveltyMetric.VAL:

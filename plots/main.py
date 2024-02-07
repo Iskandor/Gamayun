@@ -10,18 +10,10 @@ def atari_env(plots=True, tables=True):
     config = [
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'snd-vic'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'tp', 'legend': 'std-tp'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'snd2', 'legend': 'sndv2'},
     ]
 
-    plot('montezuma_snd', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=[], window=10000)
-
-    config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'snd-vic'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'tp', 'legend': 'snd-tp'},
-    ]
-
-    # plot('montezuma_sndtp_detail', config, labels=['external reward', 'intrinsic reward', 'features', 'novelty score', 'novelty distance'], keys=['re', 'ri', 'feature_space', NoveltyMetric.KEY + NoveltyMetric.VAL[0], NoveltyMetric.KEY + NoveltyMetric.VAL[1]], plot_details=[], window=10000)
-    plot('montezuma_sndtp_detail', config, labels=['external reward', 'intrinsic reward', 'features', 'novelty score'], keys=['re', 'ri', 'feature_space', NoveltyMetric.KEY], plot_details=[], window=10000)
-
+    plot('montezuma_snd', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['snd2'], window=10000)
 
 def procgen_env(plots=True, tables=True):
     key = 're'

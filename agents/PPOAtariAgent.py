@@ -7,7 +7,6 @@ from agents.PPOAgent import PPOAgent
 from algorithms.PPO import PPO
 from algorithms.ReplayBuffer import GenericTrajectoryBuffer, GenericReplayBuffer
 from analytic.ResultCollector import ResultCollector
-from analytic.metric.NoveltyMetric import NoveltyMetric
 from modules.PPO_AtariModules import PPOAtariNetwork, PPOAtariNetworkRND, PPOAtariNetworkSND, PPOAtariNetworkSP, PPOAtariNetworkICM
 from motivation.ForwardModelMotivation import ForwardModelMotivation
 from motivation.RNDMotivation import RNDMotivation, ASPDMotivation
@@ -94,18 +93,18 @@ class PPOAtariRNDAgent(PPOAtariAgent):
     def initialize_analysis(self):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), score=(1,), ri=(1,))
-        metric = NoveltyMetric(self.network.input_shape[1],
-                               self.network.input_shape[2],
-                               NoveltyMetric.Greyscale,
-                               self.network.rnd_model.learned_model,
-                               self.network.rnd_model.target_model,
-                               self.config.batch_size,
-                               self.config.device)
-        analysis.add_metric(metric)
+        # metric = NoveltyMetric(self.network.input_shape[1],
+        #                        self.network.input_shape[2],
+        #                        NoveltyMetric.Greyscale,
+        #                        self.network.rnd_model.learned_model,
+        #                        self.network.rnd_model.target_model,
+        #                        self.config.batch_size,
+        #                        self.config.device)
+        # analysis.add_metric(metric)
         return analysis
 
     def print_step_info(self, trial, stats, i):
-        print('Run {0:d} step {1:d}/{2:d} training [ext. reward {3:f} int. reward (max={4:f} mean={5:f} std={6:f}) steps {7:d}  mean reward {8:f} score {9:f})] novelty score {10:f}'.format(
+        print('Run {0:d} step {1:d}/{2:d} training [ext. reward {3:f} int. reward (max={4:f} mean={5:f} std={6:f}) steps {7:d}  mean reward {8:f} score {9:f})]'.format(
             trial,
             self.step_counter.steps,
             self.step_counter.limit,
@@ -116,7 +115,8 @@ class PPOAtariRNDAgent(PPOAtariAgent):
             int(stats['re'].step[i]),
             self.reward_avg.value().item(),
             stats['score'].sum[i],
-            stats[NoveltyMetric.KEY]))
+            )
+        )
 
     def update_analysis(self, agent_state, analysis):
         analysis.update(re=agent_state.ext_reward,
@@ -271,14 +271,14 @@ class PPOAtariSNDAgent(PPOAtariAgent):
     def initialize_analysis(self):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), score=(1,), ri=(1,), feature_space=(1,))
-        metric = NoveltyMetric(self.network.input_shape[1],
-                               self.network.input_shape[2],
-                               NoveltyMetric.Greyscale,
-                               self.network.cnd_model.learned_model,
-                               self.network.cnd_model.target_model,
-                               self.config.batch_size,
-                               self.config.device)
-        analysis.add_metric(metric)
+        # metric = NoveltyMetric(self.network.input_shape[1],
+        #                        self.network.input_shape[2],
+        #                        NoveltyMetric.Greyscale,
+        #                        self.network.cnd_model.learned_model,
+        #                        self.network.cnd_model.target_model,
+        #                        self.config.batch_size,
+        #                        self.config.device)
+        # analysis.add_metric(metric)
 
         return analysis
 
@@ -292,7 +292,7 @@ class PPOAtariSNDAgent(PPOAtariAgent):
 
     def print_step_info(self, trial, stats, i):
         print(
-            'Run {0:d} step {1:d}/{2:d} training [ext. reward {3:f} int. reward (max={4:f} mean={5:f} std={6:f}) steps {7:d}  mean reward {8:f} score {9:f}] feature space {10:f} novelty score {11:f} distance {12:f}'.format(
+            'Run {0:d} step {1:d}/{2:d} training [ext. reward {3:f} int. reward (max={4:f} mean={5:f} std={6:f}) steps {7:d}  mean reward {8:f} score {9:f}] feature space {10:f}'.format(
                 trial,
                 self.step_counter.steps,
                 self.step_counter.limit,
@@ -304,8 +304,10 @@ class PPOAtariSNDAgent(PPOAtariAgent):
                 self.reward_avg.value().item(),
                 stats['score'].sum[i],
                 stats['feature_space'].mean[i],
-                stats[NoveltyMetric.KEY + NoveltyMetric.VAL[0]],
-                stats[NoveltyMetric.KEY + NoveltyMetric.VAL[1]]))
+                # stats[NoveltyMetric.KEY + NoveltyMetric.VAL[0]],
+                # stats[NoveltyMetric.KEY + NoveltyMetric.VAL[1]],
+            )
+        )
 
     def update_analysis(self, agent_state, analysis):
         feature_dist = torch.cdist(agent_state.features, agent_state.features).mean(dim=1, keepdim=True)

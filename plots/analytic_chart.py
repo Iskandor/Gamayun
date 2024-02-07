@@ -155,23 +155,20 @@ def plot_detail_cnd(data, path, window=1000):
 
         plot_chart(num_rows, num_cols, 1, 're', data[i], ['sum'], window, color='blue', legend='extrinsic reward')
         plot_chart(num_rows, num_cols, 2, 'score', data[i], ['sum'], window, color='blue', legend='score')
-        plot_chart(num_rows, num_cols, 3, 'ri', data[i], ['mean', 'max', 'std'], window, color='red', legend='intrinsic reward')
-        plot_chart(num_rows, num_cols, 4, 'error', data[i], ['mean', 'max', 'std'], window, color='green', legend='error')
+        plot_chart(num_rows, num_cols, 3, 'ri', data[i], ['mean', 'std'], window, color='red', legend='intrinsic reward')
+        plot_chart(num_rows, num_cols, 4, 'feature_space', data[i], ['mean', 'std'], window, color='green', legend='feature space')
         plot_chart(num_rows, num_cols, 5, 'loss_prediction', data[i], ['val'], window, color='magenta', legend='loss prediction', legend_loc=9)
         plot_chart(num_rows, num_cols, 6, 'loss_target', data[i], ['val'], window, color='magenta', legend='loss target', legend_loc=9)
-        if 'loss_reg' in data[i]:
-            plot_chart(num_rows, num_cols, 7, 'loss_reg', data[i], ['val'], window, color='magenta', legend='loss target reg', legend_loc=9)
-        if 'inv_accuracy' in data[i]:
-            plot_chart(num_rows, num_cols, 7, 'inv_accuracy', data[i], ['val'], window, color='maroon', legend='inv. model accuracy', legend_loc=9)
-        if 'loss_target_norm' in data[i]:
-            plot_chart(num_rows, num_cols, 8, 'loss_target_norm', data[i], ['val'], window, color='magenta', legend='loss target norm', legend_loc=9)
-        if 'state_space' in data[i]:
-            plot_chart(num_rows, num_cols, 9, 'state_space', data[i], ['mean', 'max', 'std'], window, color='maroon', legend='state space', legend_loc=9)
-        if 'feature_space' in data[i]:
-            plot_chart(num_rows, num_cols, 10, 'feature_space', data[i], ['mean', 'max', 'std'], window, color='maroon', legend='feature space', legend_loc=9)
-
-        plot_chart(num_rows, num_cols, 11, 'ext_value', data[i], ['mean', 'max', 'std'], window, color='blue', legend='extrinsic value')
-        plot_chart(num_rows, num_cols, 12, 'int_value', data[i], ['mean', 'max', 'std'], window, color='red', legend='intrinsic value')
+        index = 7
+        if 'specificity' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'specificity', data[i], ['val'], window, color='orange', legend='TP specificity', legend_loc=9)
+            index += 1
+        if 'augmentor_loss_var' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'augmentor_loss_var', data[i], ['val'], window, color='magenta', legend='augmentor variable loss', legend_loc=9)
+            index += 1
+        if 'augmentor_loss_con' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'augmentor_loss_con', data[i], ['val'], window, color='magenta', legend='augmentor constant loss', legend_loc=9)
+            index += 1
 
         plt.savefig("{0:s}_{1:d}.png".format(path, i))
         plt.close()

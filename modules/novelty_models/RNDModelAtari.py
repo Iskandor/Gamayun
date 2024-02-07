@@ -10,7 +10,7 @@ from analytic.ResultCollector import ResultCollector
 from analytic.metric.NoveltyMetric import NoveltyMetric
 from modules import init_orthogonal
 from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari, AtariStateEncoderLarge, \
-    AtariStateEncoderResNet, SpacVICRegEncoderAtari
+    AtariStateEncoderResNet, SpacVICRegEncoderAtari, VICRegLEncoderAtari
 from utils.RunningAverage import RunningStatsSimple
 
 
@@ -457,7 +457,7 @@ class BarlowTwinsModelAtari(nn.Module):
 
 
 class VICRegModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config):
+    def __init__(self, input_shape, action_dim, config, encoder_class=VICRegEncoderAtari):
         super(VICRegModelAtari, self).__init__()
 
         self.config = config
@@ -472,8 +472,7 @@ class VICRegModelAtari(nn.Module):
 
         self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
 
-        self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim, config)
-
+        self.target_model = encoder_class(self.input_shape, self.feature_dim, config)
         self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
 
         self.learned_projection = nn.Sequential(

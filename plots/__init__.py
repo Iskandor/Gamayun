@@ -45,17 +45,18 @@ def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_
                 model = key['model']
                 id = key['id']
 
-                path = os.path.join(plot_root, algorithm, env, model)
+                # path = os.path.join(plot_root, algorithm, env, model)
+                path = os.path.join(plot_root)
                 if not os.path.exists(path):
                     os.mkdir(path)
                 path = os.path.join(path, id)
                 if not os.path.exists(path):
                     os.mkdir(path)
-                path = os.path.join(path, '{0:s}_{1:s}'.format(env, model))
+                path = os.path.join(path, '{0:s}_{1:s}_{2:s}'.format(env, model, str(key['id'])))
 
                 if model == 'baseline':
                     plot_detail_baseline(d, path, window)
-                if model == 'cnd':
+                if model == 'snd':
                     plot_detail_cnd(d, path, window)
                 if model == 'rnd':
                     plot_detail_rnd(d, path, window)

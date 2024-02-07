@@ -4,6 +4,7 @@ import torch.nn as nn
 
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
+from modules.encoders.EncoderAtari import VICRegEncoderAtari, VICRegEncoderAtariV2, VICRegLEncoderAtari
 from modules.forward_models.ForwardModelAtari import SPModelAtari, ICMModelAtari, SEERModelAtari
 from modules.novelty_models.RNDModelAtari import RNDModelAtari, STDModelAtari, BarlowTwinsModelAtari, VICRegModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari, SpacVICRegModelAtari
 
@@ -112,7 +113,11 @@ class PPOAtariNetworkSND(PPOAtariMotivationNetwork):
         if config.type == 'bt':
             self.cnd_model = BarlowTwinsModelAtari(input_shape, action_dim, config)
         if config.type == 'vicreg':
-            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config)
+            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config, encoder_class=VICRegEncoderAtari)
+        if config.type == 'vicreg2':
+            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config, encoder_class=VICRegEncoderAtariV2)
+        if config.type == 'vicregl':
+            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config, encoder_class=VICRegLEncoderAtari)
         if config.type == 'spacvicreg':
             self.cnd_model = SpacVICRegModelAtari(input_shape, action_dim, config)
         if config.type == 'st-dim':

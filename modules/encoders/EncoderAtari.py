@@ -8,8 +8,10 @@ import torch.nn.functional as F
 import numpy as np
 import torchvision
 from torchvision import transforms
+from torchvision.transforms.functional import to_pil_image
 
-from modules import init_orthogonal
+from analytic.ResultCollector import ResultCollector
+from modules import init_orthogonal, init_xavier_uniform
 from utils.Augmentation import aug_random_apply, aug_pixelate, aug_mask_tiles, aug_noise
 
 
@@ -438,12 +440,12 @@ class VICRegEncoderAtari(nn.Module):
         return self.encoder(state)
 
     def loss_function(self, states, next_states):
-        y_a = states
-        y_b = next_states
+        z_a = self.encoder(states)
+        z_b = self.encoder(next_states)
 
-        z_a = self.encoder(y_a)
-        z_b = self.encoder(y_b)
+        return self.vicreg_loss_function(z_a, z_b)
 
+    def vicreg_loss_function(self, z_a, z_b):
         inv_loss = self.invariance(z_a, z_b)
         var_loss = self.variance(z_a) + self.variance(z_b)
         cov_loss = self.covariance(z_a) + self.covariance(z_b)
@@ -471,60 +473,136 @@ class VICRegEncoderAtari(nn.Module):
 
         return cov_loss
 
+
+class VICRegLEncoderAtari(VICRegEncoderAtari):
+    def __init__(self, input_shape, feature_dim, config):
+        super(VICRegLEncoderAtari, self).__init__(input_shape, feature_dim, config)
+
+    def loss_function(self, states, next_states):
+        z_a = self.encoder(states, fmaps=True)
+        z_b = self.encoder(next_states, fmaps=True)
+
+        z_a, z_a_maps = z_a['out'], z_a['f5'].flatten(1, 2)
+        z_b, z_b_maps = z_b['out'], z_b['f5'].flatten(1, 2)
+
+        global_loss = self.vicreg_loss_function(z_a, z_b)
+
+        return global_loss
+
+    def neirest_neighbores_on_l2(self, input_maps, candidate_maps, num_matches):
+        """
+        input_maps: (B, H * W, C)
+        candidate_maps: (B, H * W, C)
+        """
+        distances = torch.cdist(input_maps, candidate_maps)
+        return self.neirest_neighbores(input_maps, candidate_maps, distances, num_matches)
+
+    def neirest_neighbores_on_location(self, input_location, candidate_location, input_maps, candidate_maps, num_matches):
+        """
+        input_location: (B, H * W, 2)
+        candidate_location: (B, H * W, 2)
+        input_maps: (B, H * W, C)
+        candidate_maps: (B, H * W, C)
+        """
+        distances = torch.cdist(input_location, candidate_location)
+        return self.neirest_neighbores(input_maps, candidate_maps, distances, num_matches)
+
+    def neirest_neighbores(self, input_maps, candidate_maps, distances, num_matches):
+        batch_size = input_maps.size(0)
+
+        if num_matches is None or num_matches == -1:
+            num_matches = input_maps.size(1)
+
+        topk_values, topk_indices = distances.topk(k=1, largest=False)
+        topk_values = topk_values.squeeze(-1)
+        topk_indices = topk_indices.squeeze(-1)
+
+        sorted_values, sorted_values_indices = torch.sort(topk_values, dim=1)
+        sorted_indices, sorted_indices_indices = torch.sort(sorted_values_indices, dim=1)
+
+        mask = torch.stack(
+            [
+                torch.where(sorted_indices_indices[i] < num_matches, True, False)
+                for i in range(batch_size)
+            ]
+        )
+        topk_indices_selected = topk_indices.masked_select(mask)
+        topk_indices_selected = topk_indices_selected.reshape(batch_size, num_matches)
+
+        indices = (
+            torch.arange(0, topk_values.size(1))
+                .unsqueeze(0)
+                .repeat(batch_size, 1)
+                .to(topk_values.device)
+        )
+        indices_selected = indices.masked_select(mask)
+        indices_selected = indices_selected.reshape(batch_size, num_matches)
+
+        filtered_input_maps = self.batched_index_select(input_maps, 1, indices_selected)
+        filtered_candidate_maps = self.batched_index_select(candidate_maps, 1, topk_indices_selected)
+
+        return filtered_input_maps, filtered_candidate_maps
+
     @staticmethod
-    def augment(x, p=0.5):
-        ax = x
-        ax = aug_random_apply(ax, p, aug_pixelate)
-        ax = aug_random_apply(ax, p, aug_mask_tiles)
-        ax = aug_random_apply(ax, p, aug_noise)
-        return ax
+    def batched_index_select(input, dim, index):
+        for ii in range(1, len(input.shape)):
+            if ii != dim:
+                index = index.unsqueeze(ii)
+        expanse = list(input.shape)
+        expanse[0] = -1
+        expanse[dim] = -1
+        index = index.expand(expanse)
+        return torch.gather(input, dim, index)
 
 
 class VICRegEncoderAtariV2(VICRegEncoderAtari):
     def __init__(self, input_shape, feature_dim, config):
         super(VICRegEncoderAtariV2, self).__init__(input_shape, feature_dim, config)
 
-        self.sample_shift = 4
-
-        self.augmentation = transforms.Compose(
-            [
-                transforms.RandomResizedCrop(size=96, scale=(0.2, 1.0), antialias=True),
-                transforms.RandomHorizontalFlip(0.5),
-                transforms.RandomApply([transforms.GaussianBlur(3)], p=0.5),
-                transforms.RandomSolarize(0.5, p=0.2),
-                transforms.RandomErasing()
-            ]
+        self.augmentor_a = nn.Sequential(
+            nn.Conv2d(self.input_channels, 16, kernel_size=3, stride=1, padding=1),
+            nn.GELU(),
+            nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1),
         )
 
+        init_xavier_uniform(self.augmentor_a[0])
+        init_xavier_uniform(self.augmentor_a[2])
+
+        self.augmentor_b = nn.Sequential(
+            nn.Conv2d(self.input_channels, 16, kernel_size=3, stride=1, padding=1),
+            nn.GELU(),
+            nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1),
+        )
+
+        init_xavier_uniform(self.augmentor_b[0])
+        init_xavier_uniform(self.augmentor_b[2])
+
     def loss_function(self, states, next_states):
-        batch_size = states.shape[0]
-        #
-        # index_a = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
-        index_b = torch.randint(low=0, high=self.sample_shift, size=(batch_size,), device=self.config.device)
-        # index_a += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
-        index_b += torch.arange(0, batch_size, device=self.config.device, dtype=torch.int)
-        # index_a = index_a.clip_(max=batch_size - 1)
-        index_b = index_b.clip_(max=batch_size - 1)
+        aug_a = self.augmentor_a(states).clip_(-1., 1.)
+        aug_b = self.augmentor_b(states).clip_(-1., 1.)
 
-        x_a = states
-        x_b = next_states[index_b]
+        x_a = states + aug_a
+        x_b = states + aug_b
 
-        # y_a = self.augmentation(x_a)
-        # y_b = self.augmentation(x_b)
-        y_a = x_a
-        y_b = x_b
-        z_a = self.encoder(y_a)
-        z_b = self.encoder(y_b)
+        # img_a = to_pil_image(x_a[0])
+        # img_a.show()
+        # img_b = to_pil_image(x_b[0])
+        # img_b.show()
 
-        inv_loss = self.invariance(z_a, z_b)
-        var_loss = self.variance(z_a) + self.variance(z_b)
-        cov_loss = self.covariance(z_a) + self.covariance(z_b)
+        z_a = self.encoder(x_a.detach())
+        z_b = self.encoder(x_b.detach())
 
-        la = 1.
-        mu = 1.
-        nu = 1. / 25
+        return self.vicreg_loss_function(z_a, z_b) + self.augmentor_loss_function(states, x_a, aug_a, x_b, aug_b)
 
-        return la * inv_loss + mu * var_loss + nu * cov_loss
+    @staticmethod
+    def augmentor_loss_function(states, x_a, aug_a, x_b, aug_b):
+        var = -F.mse_loss(aug_a, aug_b)
+        con = F.mse_loss(states, x_a) + F.mse_loss(states, x_b)
+
+        analytic = ResultCollector()
+        analytic.update(augmentor_loss_var=var.unsqueeze(-1).detach(), augmentor_loss_con=con.unsqueeze(-1).detach())
+
+        return var + con / 2
 
 
 class SpacVICRegEncoderAtari(nn.Module):
