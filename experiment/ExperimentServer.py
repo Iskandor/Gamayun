@@ -12,14 +12,18 @@ class ExperimentServer:
 
     def run(self, args):
         module = __import__('config')
-        experiment = getattr(module, args.config.rstrip())(args.num_threads, args.device, args.shift)
+        experiment = getattr(module, args.config.rstrip())(args.num_threads, args.device, args.shift, args.load)
 
-        if self.config.backend == 'torch':
-            self.run_torch_parallel(experiment, args.trials, args.device, args.gpus, args.trials_per_gpu)
-        if self.config.backend == 'ray':
-            print('running ray')
+        if args.inference:
+            thread_params = experiment, 0, args.device, args.gpus
+            self.run_inference(thread_params)
+        else:
+            if self.config.backend == 'torch':
+                self.run_training_torch_parallel(experiment, args.trials, args.device, args.gpus, args.trials_per_gpu)
+            if self.config.backend == 'ray':
+                print('running ray')
 
-    def run_torch_parallel(self, experiment, trials, device, gpus, trials_per_gpu):
+    def run_training_torch_parallel(self, experiment, trials, device, gpus, trials_per_gpu):
         multiprocessing.set_start_method('spawn')
 
         # for CPU
@@ -51,13 +55,21 @@ class ExperimentServer:
                 print(experiment)
 
             with multiprocessing.Pool(trials) as p:
-                p.map(self.run_process, thread_params)
+                p.map(self.run_training, thread_params)
 
-    def run_process(self, thread_params):
+    def run_training(self, thread_params):
         experiment, i, device, gpu = thread_params
 
         if device == 'cuda':
             torch.cuda.set_device(gpu)
 
-        experiment.run(i)
+        experiment.train(i)
+
+    def run_inference(self, thread_params):
+        experiment, i, device, gpu = thread_params
+
+        if device == 'cuda':
+            torch.cuda.set_device(gpu)
+
+        experiment.inference(i)
 

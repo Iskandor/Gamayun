@@ -95,6 +95,23 @@ class PPOAgent:
         analytic.clear()
         env.close()
 
+    def inference_loop(self, env, name, trial, agent_state):
+        s = numpy.zeros((self.config.n_env,) + env.observation_space.shape, dtype=numpy.float32)
+        for i in range(self.config.n_env):
+            s[i], metadata = env.reset(i)
+
+        agent_state.state = self.encode_state(s)
+
+        analytic = self.initialize_analysis()
+
+        while self.step_counter.running():
+            self.step(env, agent_state)
+            self.check_terminal_states(env, agent_state, analytic, trial, name)
+            self.time_estimator.update(self.config.n_env)
+
+        analytic.clear()
+        env.close()
+
     def save(self, path):
         torch.save(self.network.state_dict(), path + '.pth')
 

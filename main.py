@@ -62,6 +62,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', type=str, help='device type', default='cpu')
     parser.add_argument('--gpus', help='device ids', default=None, nargs="+", type=int)
     parser.add_argument('--load', type=str, help='path to saved agent', default='')
+    parser.add_argument('--inference', type=bool, help='inference mode', default=False)
     parser.add_argument('-t', '--trials', type=int, help='total number of trials', default=1)
     parser.add_argument('-s', '--shift', type=int, help='shift result id', default=0)
     parser.add_argument('--trials_per_gpu', type=int, help='number of trials per GPU', default=1)

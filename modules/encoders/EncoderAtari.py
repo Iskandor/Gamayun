@@ -563,6 +563,7 @@ class VICRegEncoderAtariV2(VICRegEncoderAtari):
             nn.Conv2d(self.input_channels, 16, kernel_size=3, stride=1, padding=1),
             nn.GELU(),
             nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1),
+            nn.Tanh()
         )
 
         init_xavier_uniform(self.augmentor_a[0])
@@ -572,21 +573,22 @@ class VICRegEncoderAtariV2(VICRegEncoderAtari):
             nn.Conv2d(self.input_channels, 16, kernel_size=3, stride=1, padding=1),
             nn.GELU(),
             nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1),
+            nn.Tanh()
         )
 
         init_xavier_uniform(self.augmentor_b[0])
         init_xavier_uniform(self.augmentor_b[2])
 
     def loss_function(self, states, next_states):
-        aug_a = self.augmentor_a(states).clip_(-1., 1.)
-        aug_b = self.augmentor_b(states).clip_(-1., 1.)
+        aug_a = self.augmentor_a(states)
+        aug_b = self.augmentor_b(states)
 
         x_a = states + aug_a
         x_b = states + aug_b
 
-        # img_a = to_pil_image(x_a[0])
+        # img_a = to_pil_image((aug_a[0] + 1.)/2)
         # img_a.show()
-        # img_b = to_pil_image(x_b[0])
+        # img_b = to_pil_image((aug_b[0] + 1.)/2)
         # img_b.show()
 
         z_a = self.encoder(x_a.detach())
@@ -594,15 +596,16 @@ class VICRegEncoderAtariV2(VICRegEncoderAtari):
 
         return self.vicreg_loss_function(z_a, z_b) + self.augmentor_loss_function(states, x_a, aug_a, x_b, aug_b)
 
-    @staticmethod
-    def augmentor_loss_function(states, x_a, aug_a, x_b, aug_b):
-        var = -F.mse_loss(aug_a, aug_b)
+    def augmentor_loss_function(self, states, x_a, aug_a, x_b, aug_b):
+        n = x_a.size(0)
+        # var = -(F.mse_loss(aug_a, aug_b) + aug_a.reshape(n, -1).std(dim=0).mean() + aug_b.reshape(n, -1).std(dim=0).mean())
+        var = self.variance(aug_a.reshape(n, -1)) + self.variance(aug_b.reshape(n, -1)) + self.covariance(aug_a.reshape(n, -1)) + self.covariance(aug_b.reshape(n, -1))
         con = F.mse_loss(states, x_a) + F.mse_loss(states, x_b)
 
         analytic = ResultCollector()
         analytic.update(augmentor_loss_var=var.unsqueeze(-1).detach(), augmentor_loss_con=con.unsqueeze(-1).detach())
 
-        return var + con / 2
+        return var + con
 
 
 class SpacVICRegEncoderAtari(nn.Module):
