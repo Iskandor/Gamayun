@@ -57,7 +57,8 @@ class ExperimentServer:
             with multiprocessing.Pool(trials) as p:
                 p.map(self.run_training, thread_params)
 
-    def run_training(self, thread_params):
+    @staticmethod
+    def run_training(thread_params):
         experiment, i, device, gpu = thread_params
 
         if device == 'cuda':
@@ -65,7 +66,8 @@ class ExperimentServer:
 
         experiment.train(i)
 
-    def run_inference(self, thread_params):
+    @staticmethod
+    def run_inference(thread_params):
         experiment, i, device, gpu = thread_params
 
         if device == 'cuda':

@@ -167,10 +167,9 @@ class AtariStateEncoderResNet(nn.Module):
 
 
 class ST_DIMEncoderAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, config):
+    def __init__(self, input_shape, feature_dim):
         super(ST_DIMEncoderAtari, self).__init__()
 
-        self.config = config
         self.input_channels = input_shape[0]
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
@@ -373,10 +372,9 @@ class SNDVEncoderAtari(nn.Module):
 
 
 class BarlowTwinsEncoderAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, config):
+    def __init__(self, input_shape, feature_dim):
         super(BarlowTwinsEncoderAtari, self).__init__()
 
-        self.config = config
         self.input_channels = input_shape[0]
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
@@ -425,10 +423,9 @@ class BarlowTwinsEncoderAtari(nn.Module):
 
 
 class VICRegEncoderAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, config):
+    def __init__(self, input_shape, feature_dim):
         super(VICRegEncoderAtari, self).__init__()
 
-        self.config = config
         self.input_channels = input_shape[0]
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
@@ -474,90 +471,9 @@ class VICRegEncoderAtari(nn.Module):
         return cov_loss
 
 
-class VICRegLEncoderAtari(VICRegEncoderAtari):
-    def __init__(self, input_shape, feature_dim, config):
-        super(VICRegLEncoderAtari, self).__init__(input_shape, feature_dim, config)
-
-    def loss_function(self, states, next_states):
-        z_a = self.encoder(states, fmaps=True)
-        z_b = self.encoder(next_states, fmaps=True)
-
-        z_a, z_a_maps = z_a['out'], z_a['f5'].flatten(1, 2)
-        z_b, z_b_maps = z_b['out'], z_b['f5'].flatten(1, 2)
-
-        global_loss = self.vicreg_loss_function(z_a, z_b)
-
-        return global_loss
-
-    def neirest_neighbores_on_l2(self, input_maps, candidate_maps, num_matches):
-        """
-        input_maps: (B, H * W, C)
-        candidate_maps: (B, H * W, C)
-        """
-        distances = torch.cdist(input_maps, candidate_maps)
-        return self.neirest_neighbores(input_maps, candidate_maps, distances, num_matches)
-
-    def neirest_neighbores_on_location(self, input_location, candidate_location, input_maps, candidate_maps, num_matches):
-        """
-        input_location: (B, H * W, 2)
-        candidate_location: (B, H * W, 2)
-        input_maps: (B, H * W, C)
-        candidate_maps: (B, H * W, C)
-        """
-        distances = torch.cdist(input_location, candidate_location)
-        return self.neirest_neighbores(input_maps, candidate_maps, distances, num_matches)
-
-    def neirest_neighbores(self, input_maps, candidate_maps, distances, num_matches):
-        batch_size = input_maps.size(0)
-
-        if num_matches is None or num_matches == -1:
-            num_matches = input_maps.size(1)
-
-        topk_values, topk_indices = distances.topk(k=1, largest=False)
-        topk_values = topk_values.squeeze(-1)
-        topk_indices = topk_indices.squeeze(-1)
-
-        sorted_values, sorted_values_indices = torch.sort(topk_values, dim=1)
-        sorted_indices, sorted_indices_indices = torch.sort(sorted_values_indices, dim=1)
-
-        mask = torch.stack(
-            [
-                torch.where(sorted_indices_indices[i] < num_matches, True, False)
-                for i in range(batch_size)
-            ]
-        )
-        topk_indices_selected = topk_indices.masked_select(mask)
-        topk_indices_selected = topk_indices_selected.reshape(batch_size, num_matches)
-
-        indices = (
-            torch.arange(0, topk_values.size(1))
-                .unsqueeze(0)
-                .repeat(batch_size, 1)
-                .to(topk_values.device)
-        )
-        indices_selected = indices.masked_select(mask)
-        indices_selected = indices_selected.reshape(batch_size, num_matches)
-
-        filtered_input_maps = self.batched_index_select(input_maps, 1, indices_selected)
-        filtered_candidate_maps = self.batched_index_select(candidate_maps, 1, topk_indices_selected)
-
-        return filtered_input_maps, filtered_candidate_maps
-
-    @staticmethod
-    def batched_index_select(input, dim, index):
-        for ii in range(1, len(input.shape)):
-            if ii != dim:
-                index = index.unsqueeze(ii)
-        expanse = list(input.shape)
-        expanse[0] = -1
-        expanse[dim] = -1
-        index = index.expand(expanse)
-        return torch.gather(input, dim, index)
-
-
 class VICRegEncoderAtariV2(VICRegEncoderAtari):
-    def __init__(self, input_shape, feature_dim, config):
-        super(VICRegEncoderAtariV2, self).__init__(input_shape, feature_dim, config)
+    def __init__(self, input_shape, feature_dim):
+        super(VICRegEncoderAtariV2, self).__init__(input_shape, feature_dim)
 
         self.augmentor_a = nn.Sequential(
             nn.Conv2d(self.input_channels, 16, kernel_size=3, stride=1, padding=1),
@@ -609,10 +525,9 @@ class VICRegEncoderAtariV2(VICRegEncoderAtari):
 
 
 class SpacVICRegEncoderAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, config):
+    def __init__(self, input_shape, feature_dim):
         super(SpacVICRegEncoderAtari, self).__init__()
 
-        self.config = config
         self.input_channels = input_shape[0]
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]

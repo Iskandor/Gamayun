@@ -9,18 +9,20 @@ from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, VICRegEncoderAtari
 
 
 class SPModelAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, action_dim, config):
+    def __init__(self, config):
         super(SPModelAtari, self).__init__()
 
-        self.input_shape = input_shape
-        self.encoder = ST_DIMEncoderAtari(input_shape, feature_dim, config)
+        self.input_shape = config.input_shape
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
+        self.encoder = ST_DIMEncoderAtari(self.input_shape, self.feature_dim)
 
         self.forward_model = nn.Sequential(
-            nn.Linear(feature_dim + action_dim, feature_dim),
+            nn.Linear(self.feature_dim + self.action_dim, self.feature_dim),
             nn.ReLU(),
-            nn.Linear(feature_dim, feature_dim),
+            nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
-            nn.Linear(feature_dim, feature_dim)
+            nn.Linear(self.feature_dim, self.feature_dim)
         )
 
         init_orthogonal(self.forward_model[0], np.sqrt(2))
@@ -61,16 +63,19 @@ class SPModelAtari(nn.Module):
 
 
 class ICMModelAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, action_dim, config):
+    def __init__(self, config):
         super(ICMModelAtari, self).__init__()
 
         # scalar that weighs the inverse model loss against the forward model loss
         self.scaling_factor = 0.2
 
         # encoder
-        self.input_channels = input_shape[0]
-        self.input_height = input_shape[1]
-        self.input_width = input_shape[2]
+        self.input_channels = config.input_shape[0]
+        self.input_height = config.input_shape[1]
+        self.input_width = config.input_shape[2]
+
+        feature_dim = config.feature_dim
+        action_dim = config.action_dim
 
         self.final_conv_size = 128 * (self.input_width // 8) * (self.input_height // 8)
         self.encoder = nn.Sequential(
@@ -153,15 +158,22 @@ class ICMModelAtari(nn.Module):
 
         return loss
 
+    @staticmethod
+    def preprocess(state):
+        # return state[:, 0, :, :].unsqueeze(1)
+        return state
 
 class SEERModelAtari(nn.Module):
-    def __init__(self, input_shape, feature_dim, action_dim, config):
+    def __init__(self, config):
         super(SEERModelAtari, self).__init__()
 
         input_channels = 1
-        input_height = input_shape[1]
-        input_width = input_shape[2]
-        self.encoder = VICRegEncoderAtari((input_channels, input_height, input_width), feature_dim, config)
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
+        self.encoder = VICRegEncoderAtari((input_channels, input_height, input_width), config.feature_dim)
+
+        feature_dim = config.feature_dim
+        action_dim = config.action_dim
 
         self.forward_model = nn.Sequential(
             nn.Linear(feature_dim + action_dim, feature_dim),

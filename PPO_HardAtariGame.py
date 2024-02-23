@@ -3,7 +3,7 @@ import os
 import gym
 import torch
 
-from agents import TYPE
+from agents import ActorType
 from agents.PPOAtariAgent import PPOAtariAgent, PPOAtariRNDAgent, PPOAtariSNDAgent, PPOAtariSPAgent, PPOAtariICMAgent
 from experiment.ppo_nenv_experiment import ExperimentNEnvPPO
 from plots.paths import models_root
@@ -23,7 +23,7 @@ def test(config, path, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
     experiment.add_preprocess(encode_state)
 
-    agent = PPOAtariSNDAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOAtariSNDAgent(input_shape, action_dim, config, ActorType.discrete)
     agent.load(os.path.join(models_root, path))
     experiment.test(agent)
 
@@ -41,7 +41,7 @@ def run_baseline(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOAtariAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOAtariAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_baseline(agent, trial)
 
     env.close()
@@ -58,7 +58,7 @@ def run_rnd_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOAtariRNDAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOAtariRNDAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_rnd_model(agent, trial)
 
     env.close()
@@ -75,7 +75,7 @@ def run_snd_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOAtariSNDAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOAtariSNDAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_snd_model(agent, trial)
 
     env.close()
@@ -92,7 +92,7 @@ def run_sp_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOAtariSPAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOAtariSPAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_sp_model(agent, trial)
 
     env.close()
@@ -109,7 +109,7 @@ def run_icm_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOAtariICMAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOAtariICMAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_icm_model(agent, trial)
 
     env.close()

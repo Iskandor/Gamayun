@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical, Normal
 
-from agents import TYPE
+from agents import ActorType
 from modules import init_orthogonal, init_uniform
 from utils import one_hot_code
 
@@ -101,11 +101,11 @@ class Actor(nn.Module):
         self.action_dim = action_dim
         self.head_type = head
         self.head = None
-        if head == TYPE.discrete:
+        if head == ActorType.discrete:
             self.head = DiscreteHead
-        if head == TYPE.continuous:
+        if head == ActorType.continuous:
             self.head = ContinuousHead
-        if head == TYPE.multibinary:
+        if head == ActorType.multibinary:
             pass
 
         self.model = model
@@ -120,11 +120,11 @@ class Actor(nn.Module):
         return self.head.entropy(probs)
 
     def encode_action(self, action):
-        if self.head_type == TYPE.discrete:
+        if self.head_type == ActorType.discrete:
             return one_hot_code(action, self.action_dim)
-        if self.head_type == TYPE.continuous:
+        if self.head_type == ActorType.continuous:
             return action
-        if self.head_type == TYPE.multibinary:
+        if self.head_type == ActorType.multibinary:
             return None  # not implemented
 
 

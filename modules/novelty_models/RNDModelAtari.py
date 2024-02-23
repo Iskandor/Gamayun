@@ -10,16 +10,16 @@ from analytic.ResultCollector import ResultCollector
 from analytic.metric.NoveltyMetric import NoveltyMetric
 from modules import init_orthogonal
 from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari, AtariStateEncoderLarge, \
-    AtariStateEncoderResNet, SpacVICRegEncoderAtari, VICRegLEncoderAtari
+    AtariStateEncoderResNet, SpacVICRegEncoderAtari
 from utils.RunningAverage import RunningStatsSimple
 
 
 class RNDModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config):
+    def __init__(self, config):
         super(RNDModelAtari, self).__init__()
 
-        self.input_shape = input_shape
-        self.action_dim = action_dim
+        self.input_shape = config.input_shape
+        self.action_dim = config.action_dim
 
         input_channels = 1
         input_height = self.input_shape[1]
@@ -106,24 +106,24 @@ class RNDModelAtari(nn.Module):
 
 
 class STDModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config):
+    def __init__(self, config):
         super(STDModelAtari, self).__init__()
 
         self.config = config
-        self.action_dim = action_dim
 
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
         input_channels = 1
         # input_channels = input_shape[0]
-        input_height = input_shape[1]
-        input_width = input_shape[2]
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
-        self.feature_dim = 512
 
         fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
 
         self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
 
-        self.target_model = ST_DIMEncoderAtari(self.input_shape, self.feature_dim, config)
+        self.target_model = ST_DIMEncoderAtari(self.input_shape, self.feature_dim)
 
         self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
@@ -246,18 +246,19 @@ class STDModelAtari(nn.Module):
 
 
 class SNDVModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config):
+    def __init__(self, config):
         super(SNDVModelAtari, self).__init__()
 
         self.config = config
-        self.action_dim = action_dim
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
 
         input_channels = 1
         # input_channels = input_shape[0]
-        input_height = input_shape[1]
-        input_width = input_shape[2]
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
-        self.feature_dim = 512
+
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
@@ -370,24 +371,25 @@ class SNDVModelAtari(nn.Module):
 
 
 class BarlowTwinsModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config):
+    def __init__(self, config):
         super(BarlowTwinsModelAtari, self).__init__()
 
         self.config = config
-        self.action_dim = action_dim
 
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
         input_channels = 1
         # input_channels = input_shape[0]
-        input_height = input_shape[1]
-        input_width = input_shape[2]
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
-        self.feature_dim = 512
+
 
         fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
 
         self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
 
-        self.target_model = BarlowTwinsEncoderAtari(self.input_shape, self.feature_dim, config)
+        self.target_model = BarlowTwinsEncoderAtari(self.input_shape, self.feature_dim)
 
         self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
@@ -457,22 +459,22 @@ class BarlowTwinsModelAtari(nn.Module):
 
 
 class VICRegModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config, encoder_class=VICRegEncoderAtari):
+    def __init__(self, config, encoder_class=VICRegEncoderAtari):
         super(VICRegModelAtari, self).__init__()
 
         self.config = config
-        self.action_dim = action_dim
 
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
         input_channels = 1
         # input_channels = input_shape[0]
-        input_height = input_shape[1]
-        input_width = input_shape[2]
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
-        self.feature_dim = 512
 
         self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
 
-        self.target_model = encoder_class(self.input_shape, self.feature_dim, config)
+        self.target_model = encoder_class(self.input_shape, self.feature_dim)
         self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
 
         self.learned_projection = nn.Sequential(
@@ -530,22 +532,22 @@ class VICRegModelAtari(nn.Module):
 
 
 class SpacVICRegModelAtari(VICRegModelAtari):
-    def __init__(self, input_shape, action_dim, config):
-        super(SpacVICRegModelAtari, self).__init__(input_shape, action_dim, config)
+    def __init__(self, config):
+        super(SpacVICRegModelAtari, self).__init__(config)
 
-        self.target_model = SpacVICRegEncoderAtari(self.input_shape, self.feature_dim, config)
+        self.target_model = SpacVICRegEncoderAtari(self.input_shape, self.feature_dim)
 
 
 class VINVModelAtari(VICRegModelAtari):
-    def __init__(self, input_shape, action_dim, config):
-        super(VINVModelAtari, self).__init__(input_shape, action_dim, config)
+    def __init__(self, config):
+        super(VINVModelAtari, self).__init__(config)
 
         self.inv_model = nn.Sequential(
             nn.Linear(2 * self.feature_dim, self.feature_dim),
             nn.ReLU(),
             nn.Linear(self.feature_dim, self.feature_dim // 2),
             nn.ReLU(),
-            nn.Linear(self.feature_dim // 2, action_dim)
+            nn.Linear(self.feature_dim // 2, self.action_dim)
         )
 
         gain = sqrt(2)
@@ -575,8 +577,8 @@ class VINVModelAtari(VICRegModelAtari):
 
 
 class TPModelAtari(VICRegModelAtari):
-    def __init__(self, input_shape, action_dim, config):
-        super(TPModelAtari, self).__init__(input_shape, action_dim, config)
+    def __init__(self, config):
+        super(TPModelAtari, self).__init__(config)
 
         self.terminal_model = nn.Sequential(
             nn.Linear(self.feature_dim, self.feature_dim),
@@ -623,24 +625,24 @@ class TPModelAtari(VICRegModelAtari):
 
 
 class AMIModelAtari(nn.Module):
-    def __init__(self, input_shape, action_dim, config):
+    def __init__(self, config):
         super(AMIModelAtari, self).__init__()
 
         self.config = config
-        self.action_dim = action_dim
 
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
         input_channels = 1
         # input_channels = input_shape[0]
-        input_height = input_shape[1]
-        input_width = input_shape[2]
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
-        self.feature_dim = 512
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
         self.state_average = RunningStatsSimple((4, input_height, input_width), config.device)
 
-        self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim, config)
+        self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim)
 
         self.learned_model = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),

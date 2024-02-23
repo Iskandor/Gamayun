@@ -46,4 +46,4 @@ class ForwardModelMotivation:
         else:
             reward = error
 
-        return reward * self._eta
+        return reward.clip(0., 1.) * self._eta

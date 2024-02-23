@@ -1,6 +1,6 @@
 import torch
 
-from agents import TYPE
+from agents import ActorType
 from agents.PPOProcgenAgent import PPOProcgenSNDAgent, PPOProcgenAgent, PPOProcgenRNDAgent, PPOProcgenSPAgent, PPOProcgenICMAgent
 from experiment.ppo_nenv_experiment import ExperimentNEnvPPO
 from utils.MultiEnvWrapper import MultiEnvParallel
@@ -19,7 +19,7 @@ def test(config, path, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
     experiment.add_preprocess(encode_state)
 
-    agent = PPOProcgenSNDAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOProcgenSNDAgent(input_shape, action_dim, config, ActorType.discrete)
     agent.load(path)
     experiment.test(agent)
 
@@ -37,7 +37,7 @@ def run_baseline(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOProcgenAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOProcgenAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_baseline(agent, trial)
 
     env.close()
@@ -54,7 +54,7 @@ def run_rnd_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOProcgenRNDAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOProcgenRNDAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_rnd_model(agent, trial)
 
     env.close()
@@ -71,7 +71,7 @@ def run_snd_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOProcgenSNDAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOProcgenSNDAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_snd_model(agent, trial)
 
     env.close()
@@ -88,7 +88,7 @@ def run_sp_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOProcgenSPAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOProcgenSPAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_sp_model(agent, trial)
 
     env.close()
@@ -105,7 +105,7 @@ def run_icm_model(config, trial, env_name):
     experiment = ExperimentNEnvPPO(env_name, env, config)
 
     experiment.add_preprocess(encode_state)
-    agent = PPOProcgenICMAgent(input_shape, action_dim, config, TYPE.discrete)
+    agent = PPOProcgenICMAgent(input_shape, action_dim, config, ActorType.discrete)
     experiment.run_icm_model(agent, trial)
 
     env.close()

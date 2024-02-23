@@ -98,7 +98,10 @@ class PPO:
                 self._optimizer.step()
 
     def calc_loss(self, states, ref_value, adv_value, old_actions, old_probs):
-        values, _, probs = self._network(states)
+        # values, _, probs = self._network(states)
+        model_output = self._network(states)
+        values = model_output[0]
+        probs = model_output[2]
 
         if self._motivation:
             ext_value = values[:, 0]

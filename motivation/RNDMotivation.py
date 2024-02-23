@@ -41,7 +41,7 @@ class RNDMotivation:
         return self.reward(states)
 
     def reward(self, state0):
-        reward = self.error(state0)
+        reward = self.error(state0).clip(0., 1.)
         return reward * self._eta
 
     def update_state_average(self, state):

@@ -2,19 +2,21 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from agents import ActorType
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
-from modules.encoders.EncoderAtari import VICRegEncoderAtari, VICRegEncoderAtariV2, VICRegLEncoderAtari
+from modules.encoders.EncoderAtari import VICRegEncoderAtari, VICRegEncoderAtariV2
 from modules.forward_models.ForwardModelAtari import SPModelAtari, ICMModelAtari, SEERModelAtari
-from modules.novelty_models.RNDModelAtari import RNDModelAtari, STDModelAtari, BarlowTwinsModelAtari, VICRegModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari, SpacVICRegModelAtari
+from modules.novelty_models.RNDModelAtari import RNDModelAtari, STDModelAtari, BarlowTwinsModelAtari, VICRegModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari, \
+    SpacVICRegModelAtari
 
 
 class PPOAtariNetwork(torch.nn.Module):
-    def __init__(self, input_shape, action_dim, config, head):
+    def __init__(self, config):
         super(PPOAtariNetwork, self).__init__()
 
-        self.input_shape = input_shape
-        self.action_dim = action_dim
+        self.input_shape = config.input_shape
+        self.action_dim = config.action_dim
         input_channels = self.input_shape[0]
         input_height = self.input_shape[1]
         input_width = self.input_shape[2]
@@ -55,13 +57,13 @@ class PPOAtariNetwork(torch.nn.Module):
             nn.ReLU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
-            DiscreteHead(self.feature_dim, action_dim)
+            DiscreteHead(self.feature_dim, config.action_dim)
         )
 
         init_orthogonal(self.actor[1], 0.01)
         init_orthogonal(self.actor[3], 0.01)
 
-        self.actor = Actor(self.actor, head, self.action_dim)
+        self.actor = Actor(self.actor, ActorType.discrete, self.action_dim)
 
     def forward(self, state):
         features = self.features(state)
@@ -73,8 +75,8 @@ class PPOAtariNetwork(torch.nn.Module):
 
 
 class PPOAtariMotivationNetwork(PPOAtariNetwork):
-    def __init__(self, input_shape, action_dim, config, head):
-        super(PPOAtariMotivationNetwork, self).__init__(input_shape, action_dim, config, head)
+    def __init__(self, config):
+        super(PPOAtariMotivationNetwork, self).__init__(config)
 
         self.critic = nn.Sequential(
             torch.nn.Linear(self.feature_dim, self.feature_dim),
@@ -87,46 +89,55 @@ class PPOAtariMotivationNetwork(PPOAtariNetwork):
 
 
 class PPOAtariNetworkRND(PPOAtariMotivationNetwork):
-    def __init__(self, input_shape, action_dim, config, head):
-        super(PPOAtariNetworkRND, self).__init__(input_shape, action_dim, config, head)
-        self.rnd_model = RNDModelAtari(input_shape, self.action_dim, config)
+    def __init__(self, config):
+        super(PPOAtariNetworkRND, self).__init__(config)
+        self.rnd_model = RNDModelAtari(config)
 
 
 class PPOAtariNetworkSP(PPOAtariMotivationNetwork):
-    def __init__(self, input_shape, action_dim, config, head):
-        super(PPOAtariNetworkSP, self).__init__(input_shape, action_dim, config, head)
+    def __init__(self, config):
+        super(PPOAtariNetworkSP, self).__init__(config)
         if config.type == 'sp':
-            self.forward_model = SPModelAtari(input_shape, 512, self.action_dim, config)
+            self.forward_model = SPModelAtari(config)
         if config.type == 'seer':
-            self.forward_model = SEERModelAtari(input_shape, 512, self.action_dim, config)
+            self.forward_model = SEERModelAtari(config)
 
 
 class PPOAtariNetworkICM(PPOAtariMotivationNetwork):
-    def __init__(self, input_shape, action_dim, config, head):
-        super(PPOAtariNetworkICM, self).__init__(input_shape, action_dim, config, head)
-        self.forward_model = ICMModelAtari(input_shape, 512, self.action_dim, config)
+    def __init__(self, config):
+        super(PPOAtariNetworkICM, self).__init__(config)
+        self.forward_model = ICMModelAtari(config)
 
+    def forward(self, state):
+        value, action, probs = super().forward(state)
+        features = self.forward_model.encoder(self.forward_model.preprocess(state))
+
+        return value, action, probs, features
 
 class PPOAtariNetworkSND(PPOAtariMotivationNetwork):
-    def __init__(self, input_shape, action_dim, config, head):
-        super(PPOAtariNetworkSND, self).__init__(input_shape, action_dim, config, head)
+    def __init__(self, config):
+        super(PPOAtariNetworkSND, self).__init__(config)
         if config.type == 'bt':
-            self.cnd_model = BarlowTwinsModelAtari(input_shape, action_dim, config)
+            self.cnd_model = BarlowTwinsModelAtari(config)
         if config.type == 'vicreg':
-            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config, encoder_class=VICRegEncoderAtari)
+            self.cnd_model = VICRegModelAtari(config, encoder_class=VICRegEncoderAtari)
         if config.type == 'vicreg2':
-            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config, encoder_class=VICRegEncoderAtariV2)
-        if config.type == 'vicregl':
-            self.cnd_model = VICRegModelAtari(input_shape, action_dim, config, encoder_class=VICRegLEncoderAtari)
+            self.cnd_model = VICRegModelAtari(config, encoder_class=VICRegEncoderAtariV2)
         if config.type == 'spacvicreg':
-            self.cnd_model = SpacVICRegModelAtari(input_shape, action_dim, config)
+            self.cnd_model = SpacVICRegModelAtari(config)
         if config.type == 'st-dim':
-            self.cnd_model = STDModelAtari(input_shape, action_dim, config)
+            self.cnd_model = STDModelAtari(config)
         if config.type == 'vanilla':
-            self.cnd_model = SNDVModelAtari(input_shape, action_dim, config)
+            self.cnd_model = SNDVModelAtari(config)
         if config.type == 'vinv':
-            self.cnd_model = VINVModelAtari(input_shape, action_dim, config)
+            self.cnd_model = VINVModelAtari(config)
         if config.type == 'tp':
-            self.cnd_model = TPModelAtari(input_shape, action_dim, config)
+            self.cnd_model = TPModelAtari(config)
         if config.type == 'ami':
-            self.cnd_model = AMIModelAtari(input_shape, action_dim, config)
+            self.cnd_model = AMIModelAtari(config)
+
+    def forward(self, state):
+        value, action, probs = super().forward(state)
+        features = self.cnd_model.target_model(self.cnd_model.preprocess(state))
+
+        return value, action, probs, features
