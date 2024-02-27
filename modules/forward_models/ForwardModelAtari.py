@@ -163,38 +163,59 @@ class ICMModelAtari(nn.Module):
         # return state[:, 0, :, :].unsqueeze(1)
         return state
 
+
 class SEERModelAtari(nn.Module):
     def __init__(self, config):
         super(SEERModelAtari, self).__init__()
 
+        self.config = config
+
         input_channels = 1
         input_height = config.input_shape[1]
         input_width = config.input_shape[2]
-        self.encoder = VICRegEncoderAtari((input_channels, input_height, input_width), config.feature_dim)
+        self.input_shape = (input_channels, input_height, input_width)
+        self.feature_dim = config.feature_dim
+        self.hidden_dim = config.hidden_dim
+        self.action_dim = config.action_dim
 
-        feature_dim = config.feature_dim
-        action_dim = config.action_dim
+        self.encoder = VICRegEncoderAtari(self.input_shape, self.feature_dim)
 
         self.forward_model = nn.Sequential(
-            nn.Linear(feature_dim + action_dim, feature_dim),
+            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim),
             nn.GELU(),
-            nn.Linear(feature_dim, feature_dim),
+            nn.Linear(self.feature_dim, self.feature_dim),
             nn.GELU(),
-            nn.Linear(feature_dim, feature_dim),
+            nn.Linear(self.feature_dim, self.feature_dim),
         )
 
         init_orthogonal(self.forward_model[0], np.sqrt(2))
         init_orthogonal(self.forward_model[2], np.sqrt(2))
         init_orthogonal(self.forward_model[4], np.sqrt(2))
 
-    def forward(self, state, action):
+        self.hidden_model = nn.Sequential(
+            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.GELU(),
+            nn.Linear(self.feature_dim, self.hidden_dim),
+            nn.GELU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+        )
+
+        init_orthogonal(self.hidden_model[0], np.sqrt(2))
+        init_orthogonal(self.hidden_model[2], np.sqrt(2))
+        init_orthogonal(self.hidden_model[4], np.sqrt(2))
+
+    def forward(self, state, action, next_state):
         encoded_state = self.encoder(self.preprocess(state)).detach()
-        predicted_state = self.forward_model(torch.cat([encoded_state, action], dim=1))
-        return predicted_state
+        encoded_next_state = self.encoder(self.preprocess(next_state)).detach()
+
+        hidden_state = self.hidden_model(encoded_next_state)
+        predicted_state = self.forward_model(torch.cat([encoded_state, action, hidden_state], dim=1))
+
+        return predicted_state, hidden_state
 
     def error(self, state, action, next_state):
         with torch.no_grad():
-            predicted_state = self(state, action)
+            predicted_state, _ = self(state, action, next_state)
             target = self.encoder(self.preprocess(next_state))
             error = F.mse_loss(predicted_state, target, reduction='none').mean(dim=1, keepdim=True)
 
@@ -203,14 +224,18 @@ class SEERModelAtari(nn.Module):
     def loss_function(self, state, action, next_state):
         loss_target = self.encoder.loss_function(self.preprocess(state), self.preprocess(next_state))
 
-        predicted_state = self(state, action)
+        predicted_state, hidden_state = self(state, action, next_state)
         target = self.encoder(self.preprocess(next_state))
         prediction_loss = nn.functional.mse_loss(predicted_state, target.detach())
 
-        loss = loss_target + prediction_loss
-        ResultCollector().update(loss_prediction=loss.unsqueeze(-1).detach().cpu(),
+        hidden_loss = torch.abs(hidden_state).mean() + (hidden_state.std(dim=0)).mean()
+
+        loss = loss_target + prediction_loss * self.config.pi + hidden_loss * self.config.eta
+
+        ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
                                  loss_target=loss_target.unsqueeze(-1).detach().cpu(),
-                                 prediction_loss=prediction_loss.unsqueeze(-1).detach().cpu())
+                                 loss_prediction=prediction_loss.unsqueeze(-1).detach().cpu(),
+                                 loss_hidden=hidden_loss.unsqueeze(-1).detach().cpu())
         return loss
 
     @staticmethod

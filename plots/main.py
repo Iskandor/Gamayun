@@ -11,9 +11,12 @@ def atari_env(plots=True, tables=True):
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'snd-vic'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'tp', 'legend': 'std-tp'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'snd2', 'legend': 'sndv2'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_fm', 'legend': 'seer fm'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer', 'legend': 'seer test'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_full', 'legend': 'seer full'},
     ]
 
-    plot('montezuma_snd', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['snd2'], window=10000)
+    plot('montezuma_snd', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['seer_full'], window=10000)
 
 def procgen_env(plots=True, tables=True):
     key = 're'

@@ -1,17 +1,16 @@
 import glob
 import os
-from dataclasses import dataclass
 
 from pathlib import Path
 
 import numpy as np
 
-from agents.PPOAtariAgent import PPOAtariSNDAgent, PPOAtariRNDAgent, PPOAtariICMAgent, PPOAtariSPAgent
+from agents.atari.PPOAtariAgent import PPOAtariSNDAgent, PPOAtariRNDAgent, PPOAtariICMAgent, PPOAtariSPAgent
 from agents.PPOProcgenAgent import PPOProcgenRNDAgent, PPOProcgenSNDAgent, PPOProcgenICMAgent, PPOProcgenSPAgent
 from analytic.FeatureAnalysis import FeatureAnalysis
 from analytic.MetricTensor import initialize
 from analytic.StateCollector import collect_states, collect_samples, save_states
-from plots.dataloader import parse_text_line, load_text_files
+from plots.dataloader import load_text_files
 from plots.paths import models_root, states_root, results_path, plot_root
 
 

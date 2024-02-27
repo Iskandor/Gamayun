@@ -5,10 +5,6 @@ import torch.nn as nn
 from agents import ActorType
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
-from modules.encoders.EncoderAtari import VICRegEncoderAtari, VICRegEncoderAtariV2
-from modules.forward_models.ForwardModelAtari import SPModelAtari, ICMModelAtari, SEERModelAtari
-from modules.novelty_models.RNDModelAtari import RNDModelAtari, STDModelAtari, BarlowTwinsModelAtari, VICRegModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari, \
-    SpacVICRegModelAtari
 
 
 class PPOAtariNetwork(torch.nn.Module):
@@ -86,58 +82,3 @@ class PPOAtariMotivationNetwork(PPOAtariNetwork):
 
         init_orthogonal(self.critic[0], 0.1)
         init_orthogonal(self.critic[2], 0.01)
-
-
-class PPOAtariNetworkRND(PPOAtariMotivationNetwork):
-    def __init__(self, config):
-        super(PPOAtariNetworkRND, self).__init__(config)
-        self.rnd_model = RNDModelAtari(config)
-
-
-class PPOAtariNetworkSP(PPOAtariMotivationNetwork):
-    def __init__(self, config):
-        super(PPOAtariNetworkSP, self).__init__(config)
-        if config.type == 'sp':
-            self.forward_model = SPModelAtari(config)
-        if config.type == 'seer':
-            self.forward_model = SEERModelAtari(config)
-
-
-class PPOAtariNetworkICM(PPOAtariMotivationNetwork):
-    def __init__(self, config):
-        super(PPOAtariNetworkICM, self).__init__(config)
-        self.forward_model = ICMModelAtari(config)
-
-    def forward(self, state):
-        value, action, probs = super().forward(state)
-        features = self.forward_model.encoder(self.forward_model.preprocess(state))
-
-        return value, action, probs, features
-
-class PPOAtariNetworkSND(PPOAtariMotivationNetwork):
-    def __init__(self, config):
-        super(PPOAtariNetworkSND, self).__init__(config)
-        if config.type == 'bt':
-            self.cnd_model = BarlowTwinsModelAtari(config)
-        if config.type == 'vicreg':
-            self.cnd_model = VICRegModelAtari(config, encoder_class=VICRegEncoderAtari)
-        if config.type == 'vicreg2':
-            self.cnd_model = VICRegModelAtari(config, encoder_class=VICRegEncoderAtariV2)
-        if config.type == 'spacvicreg':
-            self.cnd_model = SpacVICRegModelAtari(config)
-        if config.type == 'st-dim':
-            self.cnd_model = STDModelAtari(config)
-        if config.type == 'vanilla':
-            self.cnd_model = SNDVModelAtari(config)
-        if config.type == 'vinv':
-            self.cnd_model = VINVModelAtari(config)
-        if config.type == 'tp':
-            self.cnd_model = TPModelAtari(config)
-        if config.type == 'ami':
-            self.cnd_model = AMIModelAtari(config)
-
-    def forward(self, state):
-        value, action, probs = super().forward(state)
-        features = self.cnd_model.target_model(self.cnd_model.preprocess(state))
-
-        return value, action, probs, features

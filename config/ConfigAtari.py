@@ -1,4 +1,8 @@
-from agents.PPOAtariAgent import PPOAtariAgent, PPOAtariRNDAgent, PPOAtariSNDAgent, PPOAtariICMAgent, PPOAtariSPAgent
+from agents.atari.PPOAtariAgent import PPOAtariAgent
+from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
+from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
+from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent
+from agents.atari.PPOAtariSNDAgent import PPOAtariSNDAgent
 from config.ConfigBase import ConfigPPO
 from utils.AtariWrapper import WrapperHardAtari
 from utils.MultiEnvWrapper import MultiEnvParallel
@@ -45,7 +49,7 @@ class ConfigMontezumaRND(ConfigAtari):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=0.5, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
         self.motivation_lr = 1e-4
-        self.motivation_eta = 1
+        self.motivation_scale = 1
         self.feature_dim = 512
 
     def train(self, trial):
@@ -62,7 +66,7 @@ class ConfigMontezumaSNDBaseline(ConfigAtari):
 
         self.feature_dim = 512
         self.motivation_lr = 1e-4
-        self.motivation_eta = 0.25
+        self.motivation_scale = 0.25
         self.type = 'vicreg'
 
     def train(self, trial):
@@ -80,7 +84,7 @@ class ConfigMontezumaSND2(ConfigAtari):
 
         self.feature_dim = 512
         self.motivation_lr = 1e-4
-        self.motivation_eta = 0.25
+        self.motivation_scale = 0.25
         self.type = 'vicreg2'
 
     def train(self, trial):
@@ -109,7 +113,7 @@ class ConfigMontezumaSND_TP(ConfigAtari):
 
         self.feature_dim = 512
         self.motivation_lr = 1e-4
-        self.motivation_eta = 0.5
+        self.motivation_scale = 0.5
         self.type = 'tp'
 
     def train(self, trial):
@@ -127,7 +131,7 @@ class ConfigMontezumaSNDSpac(ConfigAtari):
 
         self.feature_dim = 512
         self.motivation_lr = 1e-4
-        self.motivation_eta = .25
+        self.motivation_scale = .25
         self.type = 'spacvicreg'
 
     def train(self, trial):
@@ -145,7 +149,7 @@ class ConfigMontezumaICM(ConfigAtari):
 
         self.feature_dim = 512
         self.motivation_lr = 1e-4
-        self.motivation_eta = 1
+        self.motivation_scale = 1
 
     def train(self, trial):
         trial += self.shift
@@ -160,13 +164,17 @@ class ConfigMontezumaSEER(ConfigAtari):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
         self.feature_dim = 512
+        self.hidden_dim = 128
         self.motivation_lr = 1e-4
-        self.motivation_eta = .1
+        self.motivation_scale = 1
         self.type = 'seer'
+
+        self.pi = 1.
+        self.eta = 0.01
 
     def train(self, trial):
         trial += self.shift
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
 
-        agent = PPOAtariSPAgent(self)
+        agent = PPOAtariSEERAgent(self)
         agent.training_loop(self.env, name, trial)

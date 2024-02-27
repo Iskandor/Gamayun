@@ -2,7 +2,7 @@ import os
 
 import matplotlib
 
-from plots.analytic_chart import plot_multiple_models, plot_detail_cnd, plot_detail_rnd, plot_detail_baseline, plot_detail_icm, plot_detail_fwd
+from plots.analytic_chart import plot_multiple_models, plot_detail_cnd, plot_detail_rnd, plot_detail_baseline, plot_detail_icm, plot_detail_fwd, plot_detail_seer
 from plots.dataloader import prepare_data
 from plots.paths import plot_root
 
@@ -58,6 +58,8 @@ def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_
                     plot_detail_baseline(d, path, window)
                 if model == 'snd':
                     plot_detail_cnd(d, path, window)
+                if model == 'seer':
+                    plot_detail_seer(d, path, window)
                 if model == 'rnd':
                     plot_detail_rnd(d, path, window)
                 if model == 'qrnd':

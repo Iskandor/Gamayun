@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from plots.key_values import key_values
 
+
 def moving_average(a, n=3):
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
@@ -168,6 +169,44 @@ def plot_detail_cnd(data, path, window=1000):
             index += 1
         if 'augmentor_loss_con' in data[i]:
             plot_chart(num_rows, num_cols, index, 'augmentor_loss_con', data[i], ['val'], window, color='magenta', legend='augmentor constant loss', legend_loc=9)
+            index += 1
+
+        plt.savefig("{0:s}_{1:d}.png".format(path, i))
+        plt.close()
+
+
+def plot_detail_seer(data, path, window=1000):
+    num_rows, num_cols = get_rows_cols(data[0])
+
+    for i in tqdm(range(len(data))):
+        plt.figure(figsize=(num_cols * 7.00, num_rows * 7.00))
+
+        plot_chart(num_rows, num_cols, 1, 're', data[i], ['sum'], window, color='blue', legend='extrinsic reward')
+        plot_chart(num_rows, num_cols, 2, 'score', data[i], ['sum'], window, color='blue', legend='score')
+        plot_chart(num_rows, num_cols, 3, 'ri', data[i], ['mean', 'std'], window, color='red', legend='intrinsic reward')
+        plot_chart(num_rows, num_cols, 4, 'feature_space', data[i], ['mean', 'std'], window, color='green', legend='feature space')
+
+        index = 5
+        if 'loss_target' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'loss_target', data[i], ['val'], window, color='magenta', legend='loss target', legend_loc=9)
+            index += 1
+        if 'loss_prediction' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'loss_prediction', data[i], ['val'], window, color='magenta', legend='loss prediction', legend_loc=9)
+            index += 1
+        if 'loss_forward' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'loss_forward', data[i], ['val'], window, color='magenta', legend='loss forward', legend_loc=9)
+            index += 1
+        if 'loss_distillation' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'loss_distillation', data[i], ['val'], window, color='magenta', legend='loss distillation', legend_loc=9)
+            index += 1
+        if 'loss_hidden' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'loss_hidden', data[i], ['val'], window, color='magenta', legend='loss hidden', legend_loc=9)
+            index += 1
+        if 'distillation_reward' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'distillation_reward', data[i], ['mean', 'std'], window, color='red', legend='distillation reward', legend_loc=9)
+            index += 1
+        if 'forward_reward' in data[i]:
+            plot_chart(num_rows, num_cols, index, 'forward_reward', data[i], ['mean', 'std'], window, color='red', legend='forward reward', legend_loc=9)
             index += 1
 
         plt.savefig("{0:s}_{1:d}.png".format(path, i))
