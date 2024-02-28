@@ -37,6 +37,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         return analysis
 
     def _step(self, env, trial, state, mode):
+        state = self.state_average.process(state)
         with torch.no_grad():
             value, action, probs, features = self.model(state)
             next_state, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))

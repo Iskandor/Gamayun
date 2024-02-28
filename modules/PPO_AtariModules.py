@@ -5,6 +5,7 @@ import torch.nn as nn
 from agents import ActorType
 from modules import init_orthogonal
 from modules.PPO_Modules import DiscreteHead, Actor, Critic2Heads
+from modules.encoders.EncoderAtari import AtariStateEncoderLarge
 
 
 class PPOAtariNetwork(torch.nn.Module):
@@ -13,31 +14,9 @@ class PPOAtariNetwork(torch.nn.Module):
 
         self.input_shape = config.input_shape
         self.action_dim = config.action_dim
-        input_channels = self.input_shape[0]
-        input_height = self.input_shape[1]
-        input_width = self.input_shape[2]
         self.feature_dim = 512
 
-        fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
-
-        self.features = nn.Sequential(
-            nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(fc_inputs_count, self.feature_dim)
-        )
-
-        init_orthogonal(self.features[0], np.sqrt(2))
-        init_orthogonal(self.features[2], np.sqrt(2))
-        init_orthogonal(self.features[4], np.sqrt(2))
-        init_orthogonal(self.features[6], np.sqrt(2))
-        init_orthogonal(self.features[9], np.sqrt(2))
+        self.features = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
 
         self.critic = nn.Sequential(
             nn.ReLU(),

@@ -97,6 +97,33 @@ class PPO:
                 torch.nn.utils.clip_grad_norm_(self._network.parameters(), max_norm=0.5)
                 self._optimizer.step()
 
+    def loss(self, values, probs, ref_value, adv_value, old_actions, old_probs):
+        if self._motivation:
+            ext_value = values[:, 0]
+            int_value = values[:, 1]
+            ext_ref_value = ref_value[:, 0]
+            int_ref_value = ref_value[:, 1]
+
+            loss_ext_value = torch.nn.functional.mse_loss(ext_value, ext_ref_value)
+            loss_int_value = torch.nn.functional.mse_loss(int_value, int_ref_value)
+            loss_value = loss_ext_value + loss_int_value
+        else:
+            loss_value = torch.nn.functional.mse_loss(values, ref_value)
+
+        log_probs = self._network.actor.log_prob(probs, old_actions)
+        old_logprobs = self._network.actor.log_prob(old_probs, old_actions)
+
+        ratio = torch.exp(log_probs - old_logprobs)
+        p1 = ratio * adv_value
+        p2 = torch.clamp(ratio, 1.0 - self._epsilon, 1.0 + self._epsilon) * adv_value
+        loss_policy = -torch.min(p1, p2)
+        loss_policy = loss_policy.mean()
+
+        entropy = self._network.actor.entropy(probs)
+        loss = loss_value * self._critic_loss_weight + loss_policy * self._actor_loss_weight + self._beta * entropy
+
+        return loss
+
     def calc_loss(self, states, ref_value, adv_value, old_actions, old_probs):
         # values, _, probs = self._network(states)
         model_output = self._network(states)

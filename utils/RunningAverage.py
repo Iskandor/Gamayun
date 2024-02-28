@@ -70,6 +70,10 @@ class RunningStatsSimple:
 
         self.std = ((self.var / self.count) ** 0.5) + self.eps
 
+    def process(self, x):
+        self.update(x)
+        return (x - self.mean) / self.std
+
 
 class RunningStats:
     def __init__(self, shape, device, n=1):

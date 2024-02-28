@@ -129,6 +129,7 @@ class PPOAgentBase:
     def __init__(self, config):
         self.config = config
         self.model = None
+        self.optimizer = None
 
         self.name = None
         self.action_type = None

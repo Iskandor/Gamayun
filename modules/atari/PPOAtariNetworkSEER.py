@@ -14,9 +14,9 @@ class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
     def __init__(self, config):
         super().__init__(config)
 
-        # input_channels = 1
-        # input_height = config.input_shape[1]
-        # input_width = config.input_shape[2]
+        input_channels = 1
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
 
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
@@ -24,7 +24,7 @@ class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
         # self.input_shape = (input_channels, input_height, input_width)
         self.input_shape = config.input_shape
 
-        self.target_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
+        self.target_model = self.features
 
         learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
 
@@ -83,7 +83,7 @@ class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
 
         distillation_error = (torch.abs(z_state - p_state) + 1e-8).pow(2).mean(dim=1, keepdim=True)
 
-        z_next_state = self.target_model(next_state)
+        z_next_state = self.target_model(self.preprocess(next_state))
         h_next_state = self.hidden_model(z_next_state)
         p_next_state = self.forward_model(torch.cat([z_state, action, h_next_state], dim=1))
 

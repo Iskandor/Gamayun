@@ -156,7 +156,7 @@ def plot_detail_cnd(data, path, window=1000):
 
         plot_chart(num_rows, num_cols, 1, 're', data[i], ['sum'], window, color='blue', legend='extrinsic reward')
         plot_chart(num_rows, num_cols, 2, 'score', data[i], ['sum'], window, color='blue', legend='score')
-        plot_chart(num_rows, num_cols, 3, 'ri', data[i], ['mean', 'std'], window, color='red', legend='intrinsic reward')
+        plot_chart(num_rows, num_cols, 3, 'ri', data[i], ['mean', 'std', 'max'], window, color='red', legend='intrinsic reward')
         plot_chart(num_rows, num_cols, 4, 'feature_space', data[i], ['mean', 'std'], window, color='green', legend='feature space')
         plot_chart(num_rows, num_cols, 5, 'loss_prediction', data[i], ['val'], window, color='magenta', legend='loss prediction', legend_loc=9)
         plot_chart(num_rows, num_cols, 6, 'loss_target', data[i], ['val'], window, color='magenta', legend='loss target', legend_loc=9)
