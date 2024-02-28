@@ -41,8 +41,8 @@ class RNDMotivation:
         return self.reward(states)
 
     def reward(self, state0):
-        reward = self.error(state0).clip(0., 1.)
-        return reward * self._eta
+        reward = self.error(state0)
+        return (reward * self._eta).clip(0., 1.)
 
     def update_state_average(self, state):
         self._network.update_state_average(state)

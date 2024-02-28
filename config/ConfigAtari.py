@@ -1,3 +1,4 @@
+from agents.atari.PPOAtariA2Agent import PPOAtariA2Agent
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
 from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
@@ -177,4 +178,24 @@ class ConfigMontezumaSEER(ConfigAtari):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
 
         agent = PPOAtariSEERAgent(self)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaA2(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+
+        self.feature_dim = 512
+        self.hidden_dim = 64
+        self.motivation_lr = 1e-4
+        self.motivation_scale = 0.01
+        self.type = 'asym'
+
+        self.eta = 0.01
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+
+        agent = PPOAtariA2Agent(self)
         agent.training_loop(self.env, name, trial)

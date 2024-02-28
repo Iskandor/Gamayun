@@ -4,13 +4,6 @@ import torch
 import torch.nn as nn
 
 
-class ARCH(Enum):
-    small_robotic = 0
-    robotic = 1
-    aeris = 2
-    atari = 3
-
-
 def init_custom(layer, weight_tensor):
     layer.weight = torch.nn.Parameter(torch.clone(weight_tensor))
     nn.init.zeros_(layer.bias)

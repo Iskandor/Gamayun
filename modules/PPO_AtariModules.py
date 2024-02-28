@@ -1,4 +1,4 @@
-import numpy as np
+from math import sqrt
 import torch
 import torch.nn as nn
 
@@ -14,7 +14,7 @@ class PPOAtariNetwork(torch.nn.Module):
 
         self.input_shape = config.input_shape
         self.action_dim = config.action_dim
-        self.feature_dim = 512
+        self.feature_dim = config.feature_dim
 
         self.features = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
 
