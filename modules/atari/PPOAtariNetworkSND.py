@@ -1,9 +1,9 @@
-from modules.PPO_AtariModules import PPOAtariMotivationNetwork
+from modules.PPO_Modules import PPOMotivationNetwork
 from modules.encoders.EncoderAtari import VICRegEncoderAtari, VICRegEncoderAtariV2
 from modules.novelty_models.RNDModelAtari import BarlowTwinsModelAtari, VICRegModelAtari, SpacVICRegModelAtari, STDModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari
 
 
-class PPOAtariNetworkSND(PPOAtariMotivationNetwork):
+class PPOAtariNetworkSND(PPOMotivationNetwork):
     def __init__(self, config):
         super(PPOAtariNetworkSND, self).__init__(config)
         if config.type == 'bt':

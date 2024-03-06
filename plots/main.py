@@ -1,22 +1,22 @@
-from analytic.metric.NoveltyMetric import NoveltyMetric
+import os
+
 from plots import plot
 from plots.analytic_table import compute_table_values
-import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def atari_env(plots=True, tables=True):
     config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'snd-vic'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'tp', 'legend': 'std-tp'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'snd2', 'legend': 'sndv2'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_fm', 'legend': 'seer fm'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer', 'legend': 'seer test'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_full', 'legend': 'seer full'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym', 'legend': 'seer asym'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v2', 'legend': 'seer asym v2'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3', 'legend': 'seer asym v3'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v4', 'legend': 'seer asym v4'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'a2', 'id': 'asym', 'legend': 'a2 asym'},
     ]
 
-    plot('montezuma_snd', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['std'], window=10000)
+    plot('montezuma_seer', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['seer_asym_v4'], window=10000)
+
 
 def procgen_env(plots=True, tables=True):
     key = 're'

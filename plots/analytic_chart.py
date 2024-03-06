@@ -134,6 +134,23 @@ def plot_multiple_models(keys, data, legend, labels, colors, path, window=1):
     plt.close()
 
 
+def plot_detail(data, path, template, window=1000):
+    num_rows, num_cols = get_rows_cols(data[0])
+
+    for i in tqdm(range(len(data))):
+        plt.figure(figsize=(num_cols * 7.00, num_rows * 7.00))
+
+        index = 0
+        for k in template.elements:
+            e = template.elements[k]
+            if k in data[i]:
+                index += 1
+                plot_chart(num_rows, num_cols, index, k, data[i], e.values, window, color=e.color, legend=e.legend)
+
+        plt.savefig("{0:s}_{1:d}.png".format(path, i))
+        plt.close()
+
+
 def plot_detail_baseline(data, path, window=1000):
     num_rows, num_cols = get_rows_cols(data[0])
 

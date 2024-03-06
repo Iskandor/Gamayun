@@ -21,6 +21,7 @@ class ConfigAtari(ConfigPPO):
 
         self.input_shape = None
         self.action_dim = None
+        self.feature_dim = 512
         self.env = None
 
         self.init_environment()
@@ -51,7 +52,6 @@ class ConfigMontezumaRND(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.motivation_scale = 1
-        self.feature_dim = 512
 
     def train(self, trial):
         trial += self.shift
@@ -65,7 +65,6 @@ class ConfigMontezumaSNDBaseline(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
         self.motivation_lr = 1e-4
         self.motivation_scale = 0.25
         self.type = 'vicreg'
@@ -83,7 +82,6 @@ class ConfigMontezumaSND2(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=8, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
         self.motivation_lr = 1e-4
         self.motivation_scale = 0.25
         self.type = 'vicreg2'
@@ -112,7 +110,6 @@ class ConfigMontezumaSND_TP(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
         self.motivation_lr = 1e-4
         self.motivation_scale = 0.5
         self.type = 'tp'
@@ -130,7 +127,6 @@ class ConfigMontezumaSNDSpac(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
         self.motivation_lr = 1e-4
         self.motivation_scale = .25
         self.type = 'spacvicreg'
@@ -148,7 +144,6 @@ class ConfigMontezumaICM(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
         self.motivation_lr = 1e-4
         self.motivation_scale = 1
 
@@ -162,20 +157,19 @@ class ConfigMontezumaICM(ConfigAtari):
 
 class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
-        self.hidden_dim = 128
+        self.hidden_dim = 64
         self.motivation_lr = 1e-4
-        self.motivation_scale = 1
-        self.type = 'seer'
+        self.motivation_scale = 0.25
+        self.type = 'asym_v2'
 
         self.pi = 1.
         self.eta = 0.01
 
     def train(self, trial):
         trial += self.shift
-        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
 
         agent = PPOAtariSEERAgent(self)
         agent.training_loop(self.env, name, trial)
@@ -183,14 +177,14 @@ class ConfigMontezumaSEER(ConfigAtari):
 
 class ConfigMontezumaA2(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=8, lr=0, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.feature_dim = 512
         self.hidden_dim = 64
         self.motivation_lr = 1e-4
-        self.motivation_scale = 0.01
+        self.motivation_scale = 0.25
         self.type = 'asym'
 
+        self.alpha = 0.5
         self.eta = 0.01
 
     def train(self, trial):

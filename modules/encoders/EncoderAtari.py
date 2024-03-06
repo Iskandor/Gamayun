@@ -72,8 +72,6 @@ class AtariStateEncoderLarge(nn.Module):
             nn.GELU(),
             nn.Flatten(),
             nn.Linear(self.final_conv_size, self.feature_size),
-            nn.GELU(),
-            nn.Linear(self.feature_size, self.feature_size),
         )
 
         # gain = nn.init.calculate_gain('relu')
@@ -82,7 +80,6 @@ class AtariStateEncoderLarge(nn.Module):
         init_orthogonal(self.main[4], gain)
         init_orthogonal(self.main[6], gain)
         init_orthogonal(self.main[9], gain)
-        init_orthogonal(self.main[11], gain)
 
         self.local_layer_depth = self.main[4].out_channels
 

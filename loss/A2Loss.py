@@ -7,32 +7,24 @@ from loss.VICRegLoss import VICRegLoss
 
 
 class A2Loss(nn.Module):
-    def __init__(self, config, encoder_a, encoder_b, hidden_model, associative_model):
+    def __init__(self, config, model):
         super(A2Loss, self).__init__()
         self.config = config
-        self.encoder_a = encoder_a
-        self.encoder_b = encoder_b
-        self.associative_model = associative_model
-        self.hidden_model = hidden_model
+        self.model = model
 
     def __call__(self, states):
-        za_state = self.encoder_a(states)
-        zb_state = self.encoder_b(states)
-        ha_state = self.hidden_model(za_state)
-        hb_state = self.hidden_model(zb_state)
-        pa_state = self.associative_model(torch.cat([zb_state, ha_state], dim=1))
-        pb_state = self.associative_model(torch.cat([za_state, hb_state], dim=1))
+        za_state, zb_state, ha_state, hb_state, pa_state, pb_state = self.model(states, loss=True)
 
         loss_encoder = self._encoder_loss(za_state) + self._encoder_loss(zb_state)
         loss_hidden = self._hidden_loss(ha_state) + self._hidden_loss(hb_state)
-        loss_associative = self._associative_loss(za_state, pa_state) + self._associative_loss(zb_state.detach(), pb_state)
+        loss_associative = self._associative_loss(za_state, pa_state) + self._associative_loss(zb_state, pb_state)
 
         ResultCollector().update(loss_encoder=loss_encoder.unsqueeze(-1).detach().cpu(),
                                  loss_hidden=loss_hidden.unsqueeze(-1).detach().cpu(),
                                  loss_associative=loss_associative.unsqueeze(-1).detach().cpu(),
                                  )
 
-        return loss_encoder + loss_hidden * self.config.eta + loss_associative
+        return loss_encoder + loss_hidden * self.config.eta + loss_associative * self.config.alpha
 
     @staticmethod
     def _encoder_loss(z_state):
@@ -41,7 +33,7 @@ class A2Loss(nn.Module):
 
     @staticmethod
     def _associative_loss(z_state, p_state):
-        loss = F.mse_loss(z_state, p_state)
+        loss = F.mse_loss(p_state, z_state)
         return loss
 
     @staticmethod

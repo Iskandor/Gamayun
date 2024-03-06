@@ -1,16 +1,15 @@
 from math import sqrt
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
-from loss.SEERLoss import SEERLoss
 from modules import init_orthogonal
-from modules.PPO_AtariModules import PPOAtariMotivationNetwork
+from modules.PPO_Modules import PPOMotivationNetwork
 from modules.encoders.EncoderAtari import AtariStateEncoderLarge
 
 
-class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
+class PPOAtariNetworkSEER(PPOMotivationNetwork):
     def __init__(self, config):
         super().__init__(config)
 
@@ -24,11 +23,11 @@ class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
         # self.input_shape = (input_channels, input_height, input_width)
         self.input_shape = config.input_shape
 
-        self.target_model = self.features
+        self.target_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
 
-        learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
+        self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
 
-        learned_projection = nn.Sequential(
+        self.learned_projection = nn.Sequential(
             nn.GELU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.GELU(),
@@ -36,13 +35,8 @@ class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
         )
 
         gain = sqrt(2)
-        init_orthogonal(learned_projection[1], gain)
-        init_orthogonal(learned_projection[3], gain)
-
-        self.learned_model = nn.Sequential(
-            learned_model,
-            learned_projection
-        )
+        init_orthogonal(self.learned_projection[1], gain)
+        init_orthogonal(self.learned_projection[3], gain)
 
         self.forward_model = nn.Sequential(
             nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim),
@@ -69,30 +63,33 @@ class PPOAtariNetworkSEER(PPOAtariMotivationNetwork):
         init_orthogonal(self.hidden_model[3], np.sqrt(2))
         init_orthogonal(self.hidden_model[5], np.sqrt(2))
 
-        self.loss = SEERLoss(config, self.target_model, self.learned_model, self.forward_model, self.hidden_model)
+    def forward(self, state=None, action=None, next_state=None, zt_state=None, zl_state=None, stage=0):
+        if stage == 0:
+            zt_state = self.target_model(self.preprocess(state))
+            zl_state = self.learned_model(self.preprocess(state))
 
-    def forward(self, state):
-        value, action, probs = super().forward(state)
-        features = self.target_model(self.preprocess(state))
+            value, action, probs = super().forward(zt_state)
+            return value, action, probs, zt_state, zl_state
 
-        return value, action, probs, features
+        if stage == 1:
+            p_state = self.learned_projection(zl_state)
+            z_next_state = self.target_model(self.preprocess(next_state))
+            h_next_state = torch.zeros((zl_state.shape[0], self.hidden_dim), dtype=torch.float32, device=self.config.device)
+            p_next_state = self.forward_model(torch.cat([zl_state, action, h_next_state], dim=1))
+            h_next_state = self.hidden_model(z_next_state)
 
-    def error(self, state, action, next_state):
-        p_state = self.learned_model(self.preprocess(state))
-        z_state = self.target_model(self.preprocess(state))
+            return p_state, z_next_state, h_next_state, p_next_state
 
-        distillation_error = (torch.abs(z_state - p_state) + 1e-8).pow(2).mean(dim=1, keepdim=True)
+        if stage == 2:
+            zt_state = self.target_model(self.preprocess(state))
+            zl_state = self.learned_model(self.preprocess(state))
 
-        z_next_state = self.target_model(self.preprocess(next_state))
-        h_next_state = self.hidden_model(z_next_state)
-        p_next_state = self.forward_model(torch.cat([z_state, action, h_next_state], dim=1))
+            p_state = self.learned_projection(zl_state)
+            z_next_state = self.target_model(self.preprocess(next_state))
+            h_next_state = self.hidden_model(z_next_state)
+            p_next_state = self.forward_model(torch.cat([zl_state, action, h_next_state], dim=1))
 
-        forward_error = (torch.abs(z_next_state - p_next_state) + 1e-8).pow(2).mean(dim=1, keepdim=True)
-
-        return distillation_error, forward_error
-
-    def loss_function(self, state, action, next_state):
-        return self.loss(self.preprocess(state), action, self.preprocess(next_state))
+            return zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state
 
     @staticmethod
     def preprocess(state):

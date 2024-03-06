@@ -51,30 +51,6 @@ class StepCounter:
         return self.steps < self.limit
 
 
-class RunningStatsSimple:
-    def __init__(self, shape, device):
-        self.count = 1
-        self.eps = 0.0000001
-        self.mean = torch.zeros(shape, device=device)
-        self.var = 0.01 * torch.ones(shape, device=device)
-        self.std = (self.var ** 0.5) + self.eps
-
-    def update(self, x):
-        self.count += 1
-
-        mean = self.mean + (x.mean(axis=0) - self.mean) / self.count
-        var = self.var + ((x - self.mean) * (x - mean)).mean(axis=0)
-
-        self.mean = mean
-        self.var = var
-
-        self.std = ((self.var / self.count) ** 0.5) + self.eps
-
-    def process(self, x):
-        self.update(x)
-        return (x - self.mean) / self.std
-
-
 class RunningStats:
     def __init__(self, shape, device, n=1):
         self.device = device

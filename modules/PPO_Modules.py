@@ -171,34 +171,53 @@ class Critic2Heads(nn.Module):
         return self.ext.bias, self.int.bias
 
 
-class PPOSimpleNetwork(torch.nn.Module):
-    def __init__(self, state_dim, action_dim, config, head):
-        super(PPOSimpleNetwork, self).__init__()
+class PPONetwork(torch.nn.Module):
+    def __init__(self, config):
+        super(PPONetwork, self).__init__()
+
+        self.config = config
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
 
         self.critic = nn.Sequential(
-            nn.Linear(state_dim, config.critic_h1),
             nn.ReLU(),
-            nn.Linear(config.critic_h1, config.critic_h2),
+            nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
-            torch.nn.Linear(config.critic_h2, 1)
+            nn.Linear(self.feature_dim, 1)
         )
-        nn.init.xavier_uniform_(self.critic[0].weight)
-        nn.init.xavier_uniform_(self.critic[2].weight)
 
-        self.layers_actor = nn.Sequential(
-            torch.nn.Linear(state_dim, config.actor_h1),
+        init_orthogonal(self.critic[1], 0.1)
+        init_orthogonal(self.critic[3], 0.01)
+
+        self.actor = nn.Sequential(
             nn.ReLU(),
-            torch.nn.Linear(config.actor_h1, config.actor_h2),
+            nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
-            DiscreteHead(config.actor_h2, action_dim)
+            DiscreteHead(self.feature_dim, config.action_dim)
         )
-        nn.init.xavier_uniform_(self.layers_actor[0].weight)
-        nn.init.xavier_uniform_(self.layers_actor[2].weight)
 
-        self.actor = Actor(self.layers_actor, head, action_dim)
+        init_orthogonal(self.actor[1], 0.01)
+        init_orthogonal(self.actor[3], 0.01)
 
-    def forward(self, state):
-        value = self.critic(state)
-        action, probs = self.actor(state)
+        self.actor = Actor(self.actor, ActorType.discrete, self.action_dim)
+
+    def forward(self, features):
+        value = self.critic(features)
+        action, probs = self.actor(features)
+        action = self.actor.encode_action(action)
 
         return value, action, probs
+
+
+class PPOMotivationNetwork(PPONetwork):
+    def __init__(self, config):
+        super(PPOMotivationNetwork, self).__init__(config)
+
+        self.critic = nn.Sequential(
+            torch.nn.Linear(self.feature_dim, self.feature_dim),
+            torch.nn.ReLU(),
+            Critic2Heads(self.feature_dim)
+        )
+
+        init_orthogonal(self.critic[0], 0.1)
+        init_orthogonal(self.critic[2], 0.01)

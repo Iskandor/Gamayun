@@ -15,9 +15,10 @@ class MODE(Enum):
 
 
 class PPO:
-    def __init__(self, network, lr, actor_loss_weight, critic_loss_weight, batch_size, trajectory_size, p_beta, p_gamma,
+    def __init__(self, network, eval_function, lr, actor_loss_weight, critic_loss_weight, batch_size, trajectory_size, p_beta, p_gamma,
                  ppo_epochs=10, p_epsilon=0.1, p_lambda=0.95, ext_adv_scale=1, int_adv_scale=1, device='cpu', n_env=1, motivation=False):
         self._network = network
+        self._eval_function = eval_function
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
         self._beta = p_beta
         self._gamma = [float(g) for g in p_gamma] if isinstance(p_gamma, List) else [p_gamma]
@@ -125,10 +126,7 @@ class PPO:
         return loss
 
     def calc_loss(self, states, ref_value, adv_value, old_actions, old_probs):
-        # values, _, probs = self._network(states)
-        model_output = self._network(states)
-        values = model_output[0]
-        probs = model_output[2]
+        values, probs = self._eval_function(states)
 
         if self._motivation:
             ext_value = values[:, 0]

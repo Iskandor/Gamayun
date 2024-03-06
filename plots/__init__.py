@@ -2,9 +2,11 @@ import os
 
 import matplotlib
 
-from plots.analytic_chart import plot_multiple_models, plot_detail_cnd, plot_detail_rnd, plot_detail_baseline, plot_detail_icm, plot_detail_fwd, plot_detail_seer
+from plots.analytic_chart import plot_multiple_models, plot_detail_cnd, plot_detail_rnd, plot_detail_baseline, plot_detail_icm, plot_detail_fwd, plot_detail_seer, plot_detail
 from plots.dataloader import prepare_data
 from plots.paths import plot_root
+from plots.template import ChartTemplates
+
 
 def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_details=None, window=1000):
     # font = {'family': 'normal',
@@ -39,6 +41,8 @@ def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_
             path,
             window)
 
+        chart_templates = ChartTemplates()
+
         for index, key in enumerate(config):
             if key['id'] in plot_details:
                 d = data[index]
@@ -54,17 +58,18 @@ def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_
                     os.mkdir(path)
                 path = os.path.join(path, '{0:s}_{1:s}_{2:s}'.format(env, model, str(key['id'])))
 
-                if model == 'baseline':
-                    plot_detail_baseline(d, path, window)
-                if model == 'snd':
-                    plot_detail_cnd(d, path, window)
-                if model == 'seer':
-                    plot_detail_seer(d, path, window)
-                if model == 'rnd':
-                    plot_detail_rnd(d, path, window)
-                if model == 'qrnd':
-                    plot_detail_rnd(d, path, window)
-                if model == 'icm':
-                    plot_detail_icm(d, path, window)
-                if model == 'fwd':
-                    plot_detail_fwd(d, path, window)
+                plot_detail(d, path, chart_templates[model], window)
+                # if model == 'baseline':
+                #     plot_detail_baseline(d, path, window)
+                # if model == 'snd':
+                #     plot_detail_cnd(d, path, window)
+                # if model == 'seer':
+                #     plot_detail_seer(d, path, window)
+                # if model == 'rnd':
+                #     plot_detail_rnd(d, path, window)
+                # if model == 'qrnd':
+                #     plot_detail_rnd(d, path, window)
+                # if model == 'icm':
+                #     plot_detail_icm(d, path, window)
+                # if model == 'fwd':
+                #     plot_detail_fwd(d, path, window)

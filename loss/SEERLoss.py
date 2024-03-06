@@ -7,24 +7,19 @@ from loss.VICRegLoss import VICRegLoss
 
 
 class SEERLoss(nn.Module):
-    def __init__(self, config, target_model, learned_model, forward_model, hidden_model):
+    def __init__(self, config, model):
         super(SEERLoss, self).__init__()
         self.config = config
-        self.target_model = target_model
-        self.learned_model = learned_model
-        self.forward_model = forward_model
-        self.hidden_model = hidden_model
+        self.model = model
+
+        self.vicreg_loss = VICRegLoss()
 
     def __call__(self, states, action, next_states):
-        z_state = self.target_model(states)
-        p_state = self.learned_model(states)
+        zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state = self.model(states, action, next_states, stage=2)
 
-        z_next_state = self.target_model(next_states)
-        h_next_state = self.hidden_model(z_next_state)
-        p_next_state = self.forward_model(torch.cat([z_state, action, h_next_state], dim=1))
-
-        loss_target = self._target_loss(z_state)
-        loss_distillation = self._distillation_loss(p_state, z_state)
+        loss_target = self._target_loss(zt_state)
+        # loss_target = self._vicreg_loss(z_state, z_next_state)
+        loss_distillation = self._distillation_loss(p_state, zt_state.detach())
         loss_forward = self._forward_loss(p_next_state, z_next_state)
         loss_hidden = self._hidden_loss(h_next_state)
 
@@ -34,6 +29,10 @@ class SEERLoss(nn.Module):
                                  loss_hidden=loss_hidden.unsqueeze(-1).detach().cpu())
 
         return loss_target + loss_distillation + loss_forward * self.config.pi + loss_hidden * self.config.eta
+
+    def _vicreg_loss(self, z_state, z_next_state):
+        loss = self.vicreg_loss(z_state, z_next_state)
+        return loss
 
     @staticmethod
     def _target_loss(z_state):
@@ -46,8 +45,8 @@ class SEERLoss(nn.Module):
         return loss
 
     @staticmethod
-    def _distillation_loss(pz_state, z_state):
-        loss = F.mse_loss(pz_state, z_state.detach())
+    def _distillation_loss(p_state, z_state):
+        loss = F.mse_loss(p_state, z_state)
         return loss
 
     @staticmethod

@@ -3,8 +3,9 @@ import torch
 
 
 class A2Motivation:
-    def __init__(self, network, lr, scale=1, device='cpu'):
+    def __init__(self, network, loss, lr, scale=1, device='cpu'):
         self._network = network
+        self._loss = loss
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
         self._scale = scale
         self._device = device
@@ -18,7 +19,7 @@ class A2Motivation:
                 states = sample.state[i].to(self._device)
 
                 self._optimizer.zero_grad()
-                loss = self._network.loss_function(states)
+                loss = self._loss(states)
                 loss.backward()
                 self._optimizer.step()
 

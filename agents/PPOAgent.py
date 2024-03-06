@@ -1,3 +1,4 @@
+import time
 from enum import Enum
 
 import numpy
@@ -129,6 +130,7 @@ class PPOAgentBase:
     def __init__(self, config):
         self.config = config
         self.model = None
+        self.algorithm = None
         self.optimizer = None
 
         self.name = None
@@ -220,3 +222,48 @@ class PPOAgentBase:
 
     def load(self, path):
         self.model.load_state_dict(torch.load(path + '.pth', map_location='cpu'))
+
+    # Experimental feature
+    def _train_ppo(self, memory, indices):
+        start = time.time()
+        sample = memory.sample(indices, False)
+
+        states = sample.state
+        values = sample.value
+        actions = sample.action
+        probs = sample.prob
+        rewards = sample.reward
+        dones = sample.mask
+
+        ref_values, adv_values = self.algorithm.calc_advantage(values, rewards, dones, self.config.gamma, self.config.n_env)
+
+        permutation = torch.randperm(self.config.trajectory_size)
+
+        states = states.reshape(-1, *states.shape[2:])[permutation].reshape(-1, self.config.batch_size, *states.shape[2:])
+        actions = actions.reshape(-1, *actions.shape[2:])[permutation].reshape(-1, self.config.batch_size, *actions.shape[2:])
+        probs = probs.reshape(-1, *probs.shape[2:])[permutation].reshape(-1, self.config.batch_size, *probs.shape[2:])
+        adv_values = adv_values.reshape(-1, *adv_values.shape[2:])[permutation].reshape(-1, self.config.batch_size, *adv_values.shape[2:])
+        ref_values = ref_values.reshape(-1, *ref_values.shape[2:])[permutation].reshape(-1, self.config.batch_size, *ref_values.shape[2:])
+
+        n = states.shape[0]
+
+        for epoch in range(self.config.ppo_epochs):
+            for i in range(n):
+                new_values, new_probs = self._ppo_eval(states[i].to(self.config.device))
+                self.optimizer.zero_grad()
+                loss = self.algorithm.loss(
+                    new_values,
+                    new_probs,
+                    ref_values[i].to(self.config.device),
+                    adv_values[i].to(self.config.device),
+                    actions[i].to(self.config.device),
+                    probs[i].to(self.config.device))
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
+                self.optimizer.step()
+
+        end = time.time()
+        print("Trajectory {0:d} batch size {1:d} epochs {2:d} training time {3:.2f}s".format(self.config.trajectory_size, self.config.batch_size, self.config.ppo_epochs, end - start))
+
+    def _ppo_eval(self, state):
+        raise NotImplementedError

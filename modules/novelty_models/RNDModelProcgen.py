@@ -7,7 +7,7 @@ import numpy as np
 from analytic.ResultCollector import ResultCollector
 from modules import init_orthogonal
 from modules.encoders.EncoderProcgen import ST_DIMEncoderProcgen, BarlowTwinsEncoderProcgen, VICRegEncoderProcgen, SNDVEncoderProcgen
-from utils.RunningAverage import RunningStatsSimple
+from utils.StateNorm import PreciseStateNorm
 
 
 class RNDModelProcgen(nn.Module):
@@ -22,7 +22,7 @@ class RNDModelProcgen(nn.Module):
         input_width = self.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
         self.feature_dim = 512
-        self.state_average = RunningStatsSimple((6, input_height, input_width), config.device)
+        self.state_average = PreciseStateNorm((6, input_height, input_width), config.device)
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
@@ -117,7 +117,7 @@ class STDModelProcgen(nn.Module):
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = RunningStatsSimple((6, input_height, input_width), config.device)
+        self.state_average = PreciseStateNorm((6, input_height, input_width), config.device)
 
         self.target_model = ST_DIMEncoderProcgen(self.input_shape, self.feature_dim, config)
 
@@ -257,7 +257,7 @@ class SNDVModelProcgen(nn.Module):
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = RunningStatsSimple((6, input_height, input_width), config.device)
+        self.state_average = PreciseStateNorm((6, input_height, input_width), config.device)
 
         self.target_model = SNDVEncoderProcgen(self.input_shape, self.feature_dim, config)
 
@@ -381,7 +381,7 @@ class BarlowTwinsModelProcgen(nn.Module):
 
         fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = RunningStatsSimple((6, input_height, input_width), config.device)
+        self.state_average = PreciseStateNorm((6, input_height, input_width), config.device)
 
         self.target_model = BarlowTwinsEncoderProcgen(self.input_shape, self.feature_dim, config)
 
@@ -468,7 +468,7 @@ class VICRegModelProcgen(nn.Module):
 
         fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = RunningStatsSimple((6, input_height, input_width), config.device)
+        self.state_average = PreciseStateNorm((6, input_height, input_width), config.device)
 
         self.target_model = VICRegEncoderProcgen(self.input_shape, self.feature_dim, config)
 

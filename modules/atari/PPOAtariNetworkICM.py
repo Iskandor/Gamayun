@@ -1,8 +1,8 @@
-from modules.PPO_AtariModules import PPOAtariMotivationNetwork
+from modules.PPO_Modules import PPOMotivationNetwork
 from modules.forward_models.ForwardModelAtari import ICMModelAtari
 
 
-class PPOAtariNetworkICM(PPOAtariMotivationNetwork):
+class PPOAtariNetworkICM(PPOMotivationNetwork):
     def __init__(self, config):
         super(PPOAtariNetworkICM, self).__init__(config)
         self.forward_model = ICMModelAtari(config)

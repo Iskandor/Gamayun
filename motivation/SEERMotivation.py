@@ -1,9 +1,8 @@
 import time
-
 import torch
 
 
-class ForwardModelMotivation:
+class SEERMotivation:
     def __init__(self, network, loss, lr, eta=1, device='cpu'):
         self._network = network
         self._loss = loss
@@ -29,22 +28,19 @@ class ForwardModelMotivation:
             end = time.time()
             print("Forward model motivation training time {0:.2f}s".format(end - start))
 
-    def error(self, state0, action, state1):
-        return self._network.error(state0, action, state1)
+    @staticmethod
+    def _error(z_state, p_state, z_next_state, p_next_state):
+        distillation_error = (z_state - p_state).pow(2).mean(dim=1, keepdim=True)
+        forward_error = (z_next_state - p_next_state).pow(2).mean(dim=1, keepdim=True)
 
-    def reward_sample(self, memory, indices):
-        sample = memory.sample(indices)
+        return distillation_error, forward_error
 
-        states = sample.state
-        next_states = sample.next_state
-        actions = sample.action
+    def reward(self, z_state, p_state, z_next_state, h_next_state, p_next_state):
+        distillation_error, forward_error = self._error(z_state, p_state, z_next_state, p_next_state)
 
-        return self.reward(states, actions, next_states)
+        # forward_scale = 1. / torch.norm(h_next_state, p=2, dim=1, keepdim=True)
+        forward_scale = 1.
 
-    def reward(self, state0=None, action=None, state1=None, error=None):
-        if error is None:
-            reward = self.error(state0, action, state1)
-        else:
-            reward = error
+        reward = (distillation_error + forward_error * forward_scale) / 2.
 
-        return (reward * self._eta).clip(0., 1.)
+        return (reward * self._eta).clip(0., 1.), distillation_error, forward_error * forward_scale
