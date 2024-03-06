@@ -31,6 +31,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             ('target_space', ['mean', 'std'], 'target space', 0),
             ('learned_space', ['mean', 'std'], 'learned space', 0),
             ('forward_space', ['mean', 'std'], 'forward space', 0),
+            ('hidden_space', ['mean', 'std'], 'hidden space', 0),
             ('distillation_reward', ['mean', 'std'], 'dist. error', 0),
             ('forward_reward', ['mean', 'std'], 'forward error', 0),
         ]
@@ -40,7 +41,16 @@ class PPOAtariSEERAgent(PPOAtariAgent):
 
     def _initialize_analysis(self):
         analysis = ResultCollector()
-        analysis.init(self.config.n_env, re=(1,), score=(1,), ri=(1,), target_space=(1,), learned_space=(1,), forward_space=(1,), distillation_reward=(1,), forward_reward=(1,))
+        analysis.init(self.config.n_env,
+                      re=(1,),
+                      score=(1,),
+                      ri=(1,),
+                      target_space=(1,),
+                      learned_space=(1,),
+                      forward_space=(1,),
+                      hidden_space=(1,),
+                      distillation_reward=(1,),
+                      forward_reward=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):
@@ -62,7 +72,17 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         target_features = torch.norm(zt_state, p=2, dim=1, keepdim=True)
         learned_features = torch.norm(zl_state, p=2, dim=1, keepdim=True)
         forward_features = torch.norm(p_next_state, p=2, dim=1, keepdim=True)
-        self.analytics.update(re=ext_reward, ri=int_reward, score=score, target_space=target_features, learned_space=learned_features, forward_space=forward_features, distillation_reward=distillation_error, forward_reward=forward_error)
+        hidden_features = torch.norm(h_next_state, p=2, dim=1, keepdim=True)
+        self.analytics.update(
+            re=ext_reward,
+            ri=int_reward,
+            score=score,
+            target_space=target_features,
+            learned_space=learned_features,
+            forward_space=forward_features,
+            hidden_space=hidden_features,
+            distillation_reward=distillation_error,
+            forward_reward=forward_error)
         self.analytics.end_step()
 
         if mode == AgentMode.TRAINING:
