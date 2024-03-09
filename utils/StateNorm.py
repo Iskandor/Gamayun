@@ -19,11 +19,10 @@ class StateNorm(metaclass=abc.ABCMeta):
                 NotImplemented)
 
     @abc.abstractmethod
-    def _update(self, x: torch.Tensor):
+    def update(self, x: torch.Tensor):
         raise NotImplementedError
 
     def process(self, x: torch.Tensor):
-        self._update(x)
         return (x - self._mean) / self._std
 
 
@@ -32,7 +31,7 @@ class PreciseStateNorm(StateNorm, ABC):
         super().__init__(shape, device)
         self._count = 1
 
-    def _update(self, x):
+    def update(self, x):
         self._count += 1
 
         mean = self._mean + (x.mean(axis=0) - self._mean) / self._count
@@ -49,7 +48,7 @@ class ExponentialDecayStateNorm(StateNorm, ABC):
         super().__init__(shape, device)
         self._alpha = 0.99
 
-    def _update(self, x):
+    def update(self, x):
         mean = x.mean(axis=0)
         self._mean = self._alpha * self._mean + (1.0 - self._alpha) * mean
 

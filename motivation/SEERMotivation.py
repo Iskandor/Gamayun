@@ -3,11 +3,12 @@ import torch
 
 
 class SEERMotivation:
-    def __init__(self, network, loss, lr, eta=1, device='cpu'):
+    def __init__(self, network, loss, lr, distillation_scale=1, forward_scale=1, device='cpu'):
         self._network = network
         self._loss = loss
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
-        self._eta = eta
+        self._distillation_scale = distillation_scale
+        self._forward_scale = forward_scale
         self._device = device
 
     def train(self, memory, indices):
@@ -26,7 +27,7 @@ class SEERMotivation:
                 self._optimizer.step()
 
             end = time.time()
-            print("Forward model motivation training time {0:.2f}s".format(end - start))
+            print("SEER motivation training time {0:.2f}s".format(end - start))
 
     @staticmethod
     def _error(z_state, p_state, z_next_state, p_next_state):
@@ -38,9 +39,8 @@ class SEERMotivation:
     def reward(self, z_state, p_state, z_next_state, h_next_state, p_next_state):
         distillation_error, forward_error = self._error(z_state, p_state, z_next_state, p_next_state)
 
-        # forward_scale = 1. / torch.norm(h_next_state, p=2, dim=1, keepdim=True)
-        forward_scale = 1.
+        confidence = torch.norm(h_next_state, p=2, dim=1, keepdim=True) <= 1.
 
-        reward = (distillation_error + forward_error * forward_scale) / 2.
+        reward = distillation_error * self._distillation_scale + forward_error * self._forward_scale * confidence
 
-        return (reward * self._eta).clip(0., 1.), distillation_error, forward_error * forward_scale
+        return reward.clip(0., 1.), distillation_error * self._distillation_scale, forward_error * self._forward_scale, confidence.int()

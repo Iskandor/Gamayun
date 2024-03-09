@@ -157,11 +157,12 @@ class ConfigMontezumaICM(ConfigAtari):
 
 class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=8, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
         self.hidden_dim = 64
         self.motivation_lr = 1e-4
-        self.motivation_scale = 0.25
+        self.distillation_scale = 0.25
+        self.forward_scale = self.distillation_scale * 0.2
         self.type = 'asym_v2'
 
         self.pi = 1.

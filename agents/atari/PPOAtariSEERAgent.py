@@ -18,7 +18,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         super().__init__(config)
         self.model = PPOAtariNetworkSEER(config).to(config.device)
         # self.motivation_memory = GenericTrajectoryBuffer(config.trajectory_size, config.batch_size, config.n_env)
-        self.motivation = SEERMotivation(self.model, SEERLoss(config, self.model), config.motivation_lr, config.motivation_scale, config.device)
+        self.motivation = SEERMotivation(self.model, SEERLoss(config, self.model), config.motivation_lr, config.distillation_scale, config.forward_scale, config.device)
         self.algorithm = PPO(self.model, self._ppo_eval, config.lr, config.actor_loss_weight, config.critic_loss_weight, config.batch_size, config.trajectory_size,
                              config.beta, config.gamma, ext_adv_scale=2, int_adv_scale=1, ppo_epochs=config.ppo_epochs, n_env=config.n_env,
                              device=config.device, motivation=True)
@@ -32,8 +32,10 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             ('learned_space', ['mean', 'std'], 'learned space', 0),
             ('forward_space', ['mean', 'std'], 'forward space', 0),
             ('hidden_space', ['mean', 'std'], 'hidden space', 0),
+            # ('next_space', ['mean', 'std'], 'next space', 0),
             ('distillation_reward', ['mean', 'std'], 'dist. error', 0),
             ('forward_reward', ['mean', 'std'], 'forward error', 0),
+            ('confidence', ['mean', 'std'], 'confidence', 0),
         ]
         info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
 
@@ -50,19 +52,26 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                       forward_space=(1,),
                       hidden_space=(1,),
                       distillation_reward=(1,),
-                      forward_reward=(1,))
+                      forward_reward=(1,),
+                      confidence=(1,)
+                      )
         return analysis
 
     def _step(self, env, trial, state, mode):
-        state = self.state_average.process(state).clip_(-4., 4.)
         with torch.no_grad():
             value, action, probs, zt_state, zl_state = self.model(state=state, stage=0)
             next_state, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
             self._check_terminal_states(env, mode, done, next_state)
 
             next_state = self._encode_state(next_state)
+            next_state = self.state_average.process(next_state).clip_(-4., 4.)
+            self.state_average.update(next_state)
+
             p_state, z_next_state, h_next_state, p_next_state = self.model(zl_state=zl_state, action=action, next_state=next_state, stage=1)
-            int_reward, distillation_error, forward_error = self.motivation.reward(zt_state, p_state, z_next_state, h_next_state, p_next_state)
+            int_reward, distillation_error, forward_error, confidence = self.motivation.reward(zt_state, p_state, z_next_state, h_next_state, p_next_state)
+
+        # state_norm = torch.norm(state, p=2, dim=[1, 2, 3])
+        # next_state_norm = torch.norm(next_state, p=2, dim=[1, 2, 3])
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
         reward = torch.cat([ext_reward, int_reward.cpu()], dim=1)
@@ -73,6 +82,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         learned_features = torch.norm(zl_state, p=2, dim=1, keepdim=True)
         forward_features = torch.norm(p_next_state, p=2, dim=1, keepdim=True)
         hidden_features = torch.norm(h_next_state, p=2, dim=1, keepdim=True)
+        # next_features = torch.norm(z_next_state, p=2, dim=1, keepdim=True)
         self.analytics.update(
             re=ext_reward,
             ri=int_reward,
@@ -82,7 +92,9 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             forward_space=forward_features,
             hidden_space=hidden_features,
             distillation_reward=distillation_error,
-            forward_reward=forward_error)
+            forward_reward=forward_error,
+            confidence=confidence,
+        )
         self.analytics.end_step()
 
         if mode == AgentMode.TRAINING:

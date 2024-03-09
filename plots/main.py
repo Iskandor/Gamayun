@@ -15,7 +15,7 @@ def atari_env(plots=True, tables=True):
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'a2', 'id': 'asym', 'legend': 'a2 asym'},
     ]
 
-    plot('montezuma_seer', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['seer_asym_v4'], window=10000)
+    plot('montezuma_seer', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['seer_asym_v2'], window=10000)
 
 
 def procgen_env(plots=True, tables=True):
