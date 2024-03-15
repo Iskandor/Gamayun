@@ -17,10 +17,10 @@ class SEERLoss(nn.Module):
     def __call__(self, states, action, next_states):
         zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state = self.model(states, action, next_states, stage=2)
 
-        loss_target = self._target_loss(zt_state)
-        # loss_target = self._vicreg_loss(z_state, z_next_state)
+        # loss_target = self._target_loss(zt_state)
+        loss_target = self._vicreg_loss(zt_state, z_next_state)
         loss_distillation = self._distillation_loss(p_state, zt_state.detach())
-        loss_forward = self._forward_loss(p_next_state, z_next_state)
+        loss_forward = self._forward_loss(p_next_state, z_next_state.detach())
         loss_hidden = self._hidden_loss(h_next_state)
 
         ResultCollector().update(loss_target=loss_target.unsqueeze(-1).detach().cpu(),
@@ -28,7 +28,7 @@ class SEERLoss(nn.Module):
                                  loss_forward=loss_forward.unsqueeze(-1).detach().cpu(),
                                  loss_hidden=loss_hidden.unsqueeze(-1).detach().cpu())
 
-        return loss_target + loss_distillation + loss_forward * self.config.pi + loss_hidden * self.config.eta
+        return loss_target + loss_distillation * self.config.delta + loss_forward * self.config.pi + loss_hidden * self.config.eta
 
     def _vicreg_loss(self, z_state, z_next_state):
         loss = self.vicreg_loss(z_state, z_next_state)

@@ -16,59 +16,61 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         input_channels = 1
         input_height = config.input_shape[1]
         input_width = config.input_shape[2]
+        postprocessor_input_shape = (input_channels, input_height, input_width)
 
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
         self.hidden_dim = config.hidden_dim
-        # self.input_shape = (input_channels, input_height, input_width)
+
         self.input_shape = config.input_shape
 
-        self.target_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
-
-        self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
+        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
+        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
 
         self.learned_projection = nn.Sequential(
-            nn.GELU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.GELU(),
             nn.Linear(self.feature_dim, self.feature_dim)
         )
 
         gain = sqrt(2)
-        init_orthogonal(self.learned_projection[1], gain)
-        init_orthogonal(self.learned_projection[3], gain)
+        init_orthogonal(self.learned_projection[0], gain)
+        init_orthogonal(self.learned_projection[2], gain)
 
         self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim),
+            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim * 4),
             nn.GELU(),
-            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.Linear(self.feature_dim * 4, self.feature_dim * 4),
             nn.GELU(),
-            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.Linear(self.feature_dim * 4, self.feature_dim),
         )
 
-        init_orthogonal(self.forward_model[0], np.sqrt(2))
-        init_orthogonal(self.forward_model[2], np.sqrt(2))
-        init_orthogonal(self.forward_model[4], np.sqrt(2))
+        gain = sqrt(2)
+        init_orthogonal(self.forward_model[0], gain)
+        init_orthogonal(self.forward_model[2], gain)
+        init_orthogonal(self.forward_model[4], gain)
 
         self.hidden_model = nn.Sequential(
+            nn.Linear(self.feature_dim, self.feature_dim),
             nn.GELU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.GELU(),
             nn.Linear(self.feature_dim, self.hidden_dim),
-            nn.GELU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
         )
 
-        init_orthogonal(self.hidden_model[1], np.sqrt(2))
-        init_orthogonal(self.hidden_model[3], np.sqrt(2))
-        init_orthogonal(self.hidden_model[5], np.sqrt(2))
+        gain = sqrt(2)
+        init_orthogonal(self.hidden_model[0], gain)
+        init_orthogonal(self.hidden_model[2], gain)
+        init_orthogonal(self.hidden_model[4], gain)
 
     def forward(self, state=None, action=None, next_state=None, zt_state=None, zl_state=None, stage=0):
         if stage == 0:
+            z_state = self.ppo_encoder(state)
             zt_state = self.target_model(self.preprocess(state))
             zl_state = self.learned_model(self.preprocess(state))
 
-            value, action, probs = super().forward(zt_state)
+            value, action, probs = super().forward(z_state)
             return value, action, probs, zt_state, zl_state
 
         if stage == 1:
@@ -93,5 +95,5 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
 
     @staticmethod
     def preprocess(state):
-        # return state[:, 0, :, :].unsqueeze(1)
-        return state
+        return state[:, 0, :, :].unsqueeze(1)
+        # return state

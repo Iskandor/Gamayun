@@ -8,14 +8,15 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def atari_env(plots=True, tables=True):
     config = [
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym', 'legend': 'seer asym'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v2', 'legend': 'seer asym v2'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3', 'legend': 'seer asym v3'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3delta', 'legend': 'seer asym v3 delta'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v4', 'legend': 'seer asym v4'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5', 'legend': 'seer asym v5'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'a2', 'id': 'asym', 'legend': 'a2 asym'},
     ]
 
-    plot('montezuma_seer', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['seer_asym_v2'], window=10000)
+    plot('montezuma_seer', config, labels=['external reward', 'score'], keys=['re', 'score'], plot_details=['seer_asym_v5'], window=10000)
 
 
 def procgen_env(plots=True, tables=True):

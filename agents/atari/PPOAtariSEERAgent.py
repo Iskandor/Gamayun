@@ -18,7 +18,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         super().__init__(config)
         self.model = PPOAtariNetworkSEER(config).to(config.device)
         # self.motivation_memory = GenericTrajectoryBuffer(config.trajectory_size, config.batch_size, config.n_env)
-        self.motivation = SEERMotivation(self.model, SEERLoss(config, self.model), config.motivation_lr, config.distillation_scale, config.forward_scale, config.device)
+        self.motivation = SEERMotivation(self.model, SEERLoss(config, self.model), config.motivation_lr, config.distillation_scale, config.forward_threshold, config.device)
         self.algorithm = PPO(self.model, self._ppo_eval, config.lr, config.actor_loss_weight, config.critic_loss_weight, config.batch_size, config.trajectory_size,
                              config.beta, config.gamma, ext_adv_scale=2, int_adv_scale=1, ppo_epochs=config.ppo_epochs, n_env=config.n_env,
                              device=config.device, motivation=True)
