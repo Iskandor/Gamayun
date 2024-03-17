@@ -39,11 +39,11 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         init_orthogonal(self.learned_projection[2], gain)
 
         self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim * 4),
+            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim * 8),
             nn.GELU(),
-            nn.Linear(self.feature_dim * 4, self.feature_dim * 4),
+            nn.Linear(self.feature_dim * 8, self.feature_dim * 8),
             nn.GELU(),
-            nn.Linear(self.feature_dim * 4, self.feature_dim),
+            nn.Linear(self.feature_dim * 8, self.feature_dim),
         )
 
         gain = sqrt(2)

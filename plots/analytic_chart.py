@@ -62,28 +62,31 @@ def prepare_data(data, master_key, key, window):
     return iv, mu, sigma
 
 
-def plot_curve(axis, stats, independent_values, color='blue', alpha=1.0, start=0.0, stop=1.0):
+def plot_curve(axis, stats, independent_values, color, legend, linestyle='solid', alpha=1.0, start=0.0, stop=1.0):
     start = int(len(independent_values) * start)
     stop = int(len(independent_values) * stop)
     if 'val' in stats:
-        line, = axis.plot(independent_values[start:stop], stats['val'][start:stop], lw=1, color=color, alpha=alpha)
+        line, = axis.plot(independent_values[start:stop], stats['val'][start:stop], lw=1, color=color, alpha=alpha, label=legend, linestyle=linestyle)
 
     if 'sum' in stats:
-        line, = axis.plot(independent_values[start:stop], stats['sum'][start:stop], lw=1, color=color, alpha=alpha)
+        line, = axis.plot(independent_values[start:stop], stats['sum'][start:stop], lw=1, color=color, alpha=alpha, label=legend, linestyle=linestyle)
 
     if 'mean' in stats:
-        line, = axis.plot(independent_values[start:stop], stats['mean'][start:stop], lw=1, color=color, alpha=alpha)
+        line, = axis.plot(independent_values[start:stop], stats['mean'][start:stop], lw=1, color=color, alpha=alpha, label=legend, linestyle=linestyle)
         if 'std' in stats:
             axis.fill_between(independent_values[start:stop], stats['mean'][start:stop] + stats['std'][start:stop], stats['mean'][start:stop] - stats['std'][start:stop], facecolor=color, alpha=0.3)
 
     if 'max' in stats:
-        axis.plot(independent_values[start:stop], stats['max'][start:stop], lw=2, color=color, alpha=alpha)
+        line = axis.plot(independent_values[start:stop], stats['max'][start:stop], lw=2, color=color, alpha=alpha, label=legend, linestyle=linestyle)
 
     return line
 
 
-def get_rows_cols(data):
+def get_rows_cols(data, template=None):
     n = len(data)
+
+    if template:
+        pass
 
     rows = int(sqrt(n))
     cols = math.ceil(n / rows)
@@ -91,11 +94,11 @@ def get_rows_cols(data):
     return rows, cols
 
 
-def plot_chart(num_rows, num_cols, index, key, data, value_key, window, color, legend, legend_loc=4):
+def plot_chart(num_rows, num_cols, index, key, data, value_key, window, color, legend, legend_loc=4, linestyle='solid'):
     ax = plt.subplot(num_rows, num_cols, index)
     ax.set_xlabel('steps')
-    ax.set_ylabel(legend)
-    ax.grid()
+    # ax.set_ylabel(legend)
+    ax.grid(visible=True)
 
     stats = {}
     iv = None
@@ -104,8 +107,12 @@ def plot_chart(num_rows, num_cols, index, key, data, value_key, window, color, l
         iv, stats[k] = prepare_data_instance(data[key]['step'].squeeze(), data[key][k].squeeze(), window)
 
     # plot_curve(ax, stats, iv, color=color, alpha=1.0, start=0.0, stop=1.0)
-    plot_curve(ax, stats, iv, color=color, alpha=1.0, start=0.01, stop=1.0)
-    plt.legend([legend], loc=legend_loc)
+    plot_curve(ax, stats, iv, color=color, legend=legend, linestyle=linestyle, alpha=1.0, start=0.01, stop=1.0)
+
+    # if type(legend) is not list:
+    #     legend = [legend]
+    # plt.legend(legend, loc=legend_loc)
+    plt.legend()
 
 
 def plot_multiple_models(keys, data, legend, labels, colors, path, window=1):
@@ -125,7 +132,7 @@ def plot_multiple_models(keys, data, legend, labels, colors, path, window=1):
             iv, mu, sigma = prepare_data(d, key, key_values[key], window)
             iv = [val / 1e6 for val in iv]
             # mu = np.clip(mu, 0, 0.1)
-            lines.append(plot_curve(ax, {'mean': mu, 'std': sigma}, iv, color=colors[index], start=0.0))
+            lines.append(plot_curve(ax, {'mean': mu, 'std': sigma}, iv, color=colors[index], legend=None, start=0.0))
 
         if legend is not None:
             ax.legend(lines, legend[:len(data)], loc=0)
@@ -135,17 +142,22 @@ def plot_multiple_models(keys, data, legend, labels, colors, path, window=1):
 
 
 def plot_detail(data, path, template, window=1000):
+    linestyle_cycle = ['solid', 'dotted', 'dashed', 'dashdot']
     num_rows, num_cols = get_rows_cols(data[0])
 
     for i in tqdm(range(len(data))):
         plt.figure(figsize=(num_cols * 7.00, num_rows * 7.00))
 
         index = 0
-        for k in template.elements:
-            e = template.elements[k]
-            if k in data[i]:
-                index += 1
-                plot_chart(num_rows, num_cols, index, k, data[i], e.values, window, color=e.color, legend=e.legend)
+        for composite in template.elements:
+            index += 1
+            charts = 0
+            for e in composite:
+                if e.key in data[i]:
+                    plot_chart(num_rows, num_cols, index, e.key, data[i], e.values, window, color=e.color, legend=e.legend, linestyle=linestyle_cycle[charts % len(linestyle_cycle)])
+                    charts += 1
+            if charts == 0:
+                index -= 1
 
         plt.savefig("{0:s}_{1:d}.png".format(path, i))
         plt.close()

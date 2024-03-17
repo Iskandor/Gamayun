@@ -17,6 +17,7 @@ key_values = {
     NoveltyMetric.KEY: 'val',
     'augmentor_loss_var': 'val',
     'augmentor_loss_con': 'val',
+    'loss_forward': 'val',
 }
 
 for v in NoveltyMetric.VAL:

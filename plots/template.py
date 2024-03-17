@@ -1,5 +1,6 @@
 class TemplateElement:
-    def __init__(self, values, color, legend):
+    def __init__(self, key, values, color, legend):
+        self.key = key
         self.values = values
         self.color = color
         self.legend = legend
@@ -7,10 +8,16 @@ class TemplateElement:
 
 class Template:
     def __init__(self):
-        self.elements = {}
+        self.elements = []
 
     def add_element(self, key, values, color, legend):
-        self.elements[key] = TemplateElement(values, color, legend)
+        self.elements.append([TemplateElement(key, values, color, legend)])
+
+    def add_composite(self, description, values):
+        composite = []
+        for key, color, legend in description:
+            composite.append(TemplateElement(key, values, color, legend))
+        self.elements.append(composite)
 
 
 class ChartTemplates:
@@ -40,11 +47,13 @@ class ChartTemplates:
         self.templates['seer'].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates['seer'].add_element('score', ['sum'], 'blue', 'score')
         self.templates['seer'].add_element('ri', ['mean', 'std'], 'red', 'intrinsic reward')
-        self.templates['seer'].add_element('distillation_reward', ['mean', 'std'], 'red', 'distillation reward')
-        self.templates['seer'].add_element('forward_reward', ['mean', 'std'], 'red', 'forward reward')
-        self.templates['seer'].add_element('target_space', ['mean', 'std'], 'green', 'target space L2 norm')
-        self.templates['seer'].add_element('learned_space', ['mean', 'std'], 'green', 'learned space L2 norm')
-        self.templates['seer'].add_element('forward_space', ['mean', 'std'], 'green', 'forward space L2 norm')
+        self.templates['seer'].add_composite([('distillation_reward', 'red', 'distillation reward'),
+                                              ('forward_reward', 'darkred', 'forward reward')],
+                                             ['mean', 'std'])
+        self.templates['seer'].add_composite([('target_space', 'green', 'target space L2 norm'),
+                                              ('learned_space', 'darkgreen', 'learned space L2 norm'),
+                                              ('forward_space', 'limegreen', 'forward space L2 norm')],
+                                             ['mean', 'std'])
         self.templates['seer'].add_element('next_space', ['mean', 'std'], 'green', 'next space L2 norm')
         self.templates['seer'].add_element('hidden_space', ['mean', 'std'], 'green', 'hidden space L2 norm')
         self.templates['seer'].add_element('confidence', ['mean', 'std'], 'orange', 'confidence')

@@ -20,6 +20,7 @@ class SEERLoss(nn.Module):
         # loss_target = self._target_loss(zt_state)
         loss_target = self._vicreg_loss(zt_state, z_next_state)
         loss_distillation = self._distillation_loss(p_state, zt_state.detach())
+        # loss_forward = self._forward_loss_prior(p_state.detach(), p_next_state, z_next_state.detach())
         loss_forward = self._forward_loss(p_next_state, z_next_state.detach())
         loss_hidden = self._hidden_loss(h_next_state)
 
@@ -42,6 +43,11 @@ class SEERLoss(nn.Module):
     @staticmethod
     def _forward_loss(p_next_state, z_next_state):
         loss = F.mse_loss(p_next_state, z_next_state)
+        return loss
+
+    @staticmethod
+    def _forward_loss_prior(p_state, p_next_state, z_next_state):
+        loss = F.mse_loss(p_next_state, z_next_state) + F.mse_loss(p_next_state, p_state)
         return loss
 
     @staticmethod
