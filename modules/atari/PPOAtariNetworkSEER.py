@@ -21,6 +21,8 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
         self.hidden_dim = config.hidden_dim
+        self.learned_projection_dim = config.learned_projection_dim
+        self.forward_model_dim = config.forward_model_dim
 
         self.input_shape = config.input_shape
 
@@ -29,21 +31,31 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
 
         self.learned_projection = nn.Sequential(
-            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.Linear(self.feature_dim, self.learned_projection_dim),
             nn.GELU(),
-            nn.Linear(self.feature_dim, self.feature_dim)
+            nn.Linear(self.learned_projection_dim, self.feature_dim)
         )
 
         gain = sqrt(2)
         init_orthogonal(self.learned_projection[0], gain)
         init_orthogonal(self.learned_projection[2], gain)
 
+        # self.action_projection = nn.Sequential(
+        #     nn.Linear(self.action_dim, self.feature_dim),
+        #     nn.GELU(),
+        #     nn.Linear(self.feature_dim, self.feature_dim),
+        # )
+        #
+        # gain = sqrt(2)
+        # init_orthogonal(self.action_projection[0], gain)
+        # init_orthogonal(self.action_projection[2], gain)
+
         self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim * 8),
+            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.forward_model_dim),
             nn.GELU(),
-            nn.Linear(self.feature_dim * 8, self.feature_dim * 8),
+            nn.Linear(self.forward_model_dim, self.forward_model_dim),
             nn.GELU(),
-            nn.Linear(self.feature_dim * 8, self.feature_dim),
+            nn.Linear(self.forward_model_dim, self.feature_dim),
         )
 
         gain = sqrt(2)
@@ -77,6 +89,7 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
             p_state = self.learned_projection(zl_state)
             z_next_state = self.target_model(self.preprocess(next_state))
             h_next_state = torch.zeros((zl_state.shape[0], self.hidden_dim), dtype=torch.float32, device=self.config.device)
+            # z_action = self.action_projection(action)
             p_next_state = self.forward_model(torch.cat([zl_state, action, h_next_state], dim=1))
             h_next_state = self.hidden_model(z_next_state)
 
@@ -89,6 +102,7 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
             p_state = self.learned_projection(zl_state)
             z_next_state = self.target_model(self.preprocess(next_state))
             h_next_state = self.hidden_model(z_next_state)
+            # z_action = self.action_projection(action)
             p_next_state = self.forward_model(torch.cat([zl_state, action, h_next_state], dim=1))
 
             return zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state

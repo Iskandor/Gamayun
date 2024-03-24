@@ -5,6 +5,7 @@ key_values = {
     'score': 'sum',
     'ri': 'mean',
     'error': 'mean',
+    'forward_reward': 'mean',
     'loss_prediction': 'val',
     'loss_target': 'val',
     'loss_reg': 'val',

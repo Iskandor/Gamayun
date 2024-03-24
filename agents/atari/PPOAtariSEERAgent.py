@@ -5,7 +5,6 @@ import torch
 from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
-from algorithms.ReplayBuffer import GenericTrajectoryBuffer
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from loss.SEERLoss import SEERLoss
@@ -17,8 +16,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
     def __init__(self, config):
         super().__init__(config)
         self.model = PPOAtariNetworkSEER(config).to(config.device)
-        # self.motivation_memory = GenericTrajectoryBuffer(config.trajectory_size, config.batch_size, config.n_env)
-        self.motivation = SEERMotivation(self.model, SEERLoss(config, self.model), config.motivation_lr, config.distillation_scale, config.forward_threshold, config.device)
+        self.motivation = SEERMotivation(self.model, SEERLoss(config, self.model), config.motivation_lr, config.distillation_scale, config.forward_scale, config.forward_threshold, config.device)
         self.algorithm = PPO(self.model, self._ppo_eval, config.lr, config.actor_loss_weight, config.critic_loss_weight, config.batch_size, config.trajectory_size,
                              config.beta, config.gamma, ext_adv_scale=2, int_adv_scale=1, ppo_epochs=config.ppo_epochs, n_env=config.n_env,
                              device=config.device, motivation=True)
@@ -32,7 +30,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             ('learned_space', ['mean', 'std'], 'learned space', 0),
             ('forward_space', ['mean', 'std'], 'forward space', 0),
             ('hidden_space', ['mean', 'std'], 'hidden space', 0),
-            # ('next_space', ['mean', 'std'], 'next space', 0),
+            ('next_space', ['mean', 'std'], 'next space', 0),
             ('distillation_reward', ['mean', 'std'], 'dist. error', 0),
             ('forward_reward', ['mean', 'std'], 'forward error', 0),
             ('confidence', ['mean', 'std'], 'confidence', 0),
@@ -48,6 +46,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                       score=(1,),
                       ri=(1,),
                       target_space=(1,),
+                      next_space=(1,),
                       learned_space=(1,),
                       forward_space=(1,),
                       hidden_space=(1,),
@@ -82,12 +81,13 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         learned_features = torch.norm(zl_state, p=2, dim=1, keepdim=True)
         forward_features = torch.norm(p_next_state, p=2, dim=1, keepdim=True)
         hidden_features = torch.norm(h_next_state, p=2, dim=1, keepdim=True)
-        # next_features = torch.norm(z_next_state, p=2, dim=1, keepdim=True)
+        next_features = torch.norm(z_next_state, p=2, dim=1, keepdim=True)
         self.analytics.update(
             re=ext_reward,
             ri=int_reward,
             score=score,
             target_space=target_features,
+            next_space=next_features,
             learned_space=learned_features,
             forward_space=forward_features,
             hidden_space=hidden_features,

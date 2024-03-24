@@ -3,11 +3,12 @@ import torch
 
 
 class SEERMotivation:
-    def __init__(self, network, loss, lr, distillation_scale=1, forward_threshold=1, device='cpu'):
+    def __init__(self, network, loss, lr, distillation_scale=1, forward_scale=1, forward_threshold=1, device='cpu'):
         self._network = network
         self._loss = loss
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
         self._distillation_scale = distillation_scale
+        self._forward_scale = forward_scale
         self._forward_threshold = forward_threshold
         self._device = device
 
@@ -41,6 +42,6 @@ class SEERMotivation:
 
         confidence = torch.norm(h_next_state, p=2, dim=1, keepdim=True) <= self._forward_threshold
 
-        reward = distillation_error * self._distillation_scale + forward_error * confidence
+        reward = distillation_error * self._distillation_scale + forward_error * self._forward_scale * confidence
 
         return reward.clip(0., 1.), distillation_error, forward_error, confidence.int()

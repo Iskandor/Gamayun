@@ -159,11 +159,83 @@ class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
+        self.hidden_dim = self.feature_dim // 4
+        self.learned_projection_dim = self.feature_dim
+        self.forward_model_dim = self.feature_dim * 8
+        self.motivation_lr = 1e-4
+        self.distillation_scale = 0.25
+        self.forward_scale = 0.01
+        self.forward_threshold = 0.1
+        self.type = 'asym_v6'
+
+        self.delta = 0.5
+        self.pi = 0.5
+        self.eta = 0.01
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+
+        agent = PPOAtariSEERAgent(self)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaSEER2(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+
+        self.hidden_dim = self.feature_dim // 8
+        self.motivation_lr = 1e-4
+        self.distillation_scale = 0.25
+        self.forward_scale = 0.01
+        self.forward_threshold = 0.1
+        self.type = 'asym_v5m5'
+
+        self.delta = 0.5
+        self.pi = 0.5
+        self.eta = 0.01
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+
+        agent = PPOAtariSEERAgent(self)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaSEER3(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+
         self.hidden_dim = self.feature_dim // 2
         self.motivation_lr = 1e-4
         self.distillation_scale = 0.25
-        self.forward_threshold = 0.1
-        self.type = 'asym_v5-3'
+        self.forward_scale = 0.01
+        self.forward_threshold = 1
+        self.type = 'asym_v5m3f1'
+
+        self.delta = 0.5
+        self.pi = 0.5
+        self.eta = 0.01
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+
+        agent = PPOAtariSEERAgent(self)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaSEER4(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+
+        self.hidden_dim = self.feature_dim // 2
+        self.motivation_lr = 1e-4
+        self.distillation_scale = 0.25
+        self.forward_scale = 0.005
+        self.forward_threshold = 1
+        self.type = 'asym_v5m3f2'
 
         self.delta = 0.5
         self.pi = 0.5
