@@ -3,6 +3,7 @@ from enum import Enum
 
 import numpy
 import torch
+from gym.wrappers.monitoring.video_recorder import VideoRecorder
 
 from agents import ActorType
 from algorithms.ReplayBuffer import GenericTrajectoryBuffer
@@ -143,7 +144,7 @@ class PPOAgentBase:
         self.step_counter = StepCounter(int(config.steps * 1e6))
         self.reward_avg = RunningAverageWindow(100)
         self.time_estimator = PPOTimeEstimator(self.step_counter.limit)
-        self.best_agent_score = 0.
+        self.best_agent_score = -1.
 
     def _initialize_env(self, env):
         s = numpy.zeros((self.config.n_env,) + env.observation_space.shape, dtype=numpy.float32)
@@ -190,19 +191,16 @@ class PPOAgentBase:
     #     if self.action_type == ActorType.multibinary:
     #         return torch.argmax(action, dim=1).numpy()
 
-    def _loop(self, env, trial, mode: AgentMode):
-        state = self._encode_state(self._initialize_env(env))
-
-        while self.step_counter.running():
-            state = self._step(env, trial, state, mode)
-            self.time_estimator.update(self.config.n_env)
-
     def training_loop(self, env, name, trial):
         self.name = name
         self.info = self._initialize_info(trial)
         self.analytics = self._initialize_analysis()
 
-        self._loop(env, trial, AgentMode.TRAINING)
+        state = self._encode_state(self._initialize_env(env))
+
+        while self.step_counter.running():
+            state, done = self._step(env, trial, state, AgentMode.TRAINING)
+            self.time_estimator.update(self.config.n_env)
 
         print('Saving data...{0:s}'.format(name))
         self.analytics.reset(numpy.array(range(self.config.n_env)))
@@ -211,11 +209,39 @@ class PPOAgentBase:
         self.analytics.clear()
         env.close()
 
-    def inference_loop(self, env, trial):
+    def inference_loop(self, env, name, trial):
+        video_path = name + '.mp4'
+        video_recorder = VideoRecorder(env.envs_list[0], video_path, enabled=video_path is not None)
+
         self.info = self._initialize_info(trial)
         self.analytics = self._initialize_analysis()
-        self._loop(env, trial, AgentMode.INFERENCE)
+
+        state = self._encode_state(self._initialize_env(env))
+        stop = False
+
+        while not stop:
+            env.render(0)
+            video_recorder.capture_frame()
+            state, done = self._step(env, trial, state, AgentMode.INFERENCE)
+            stop = done.item() == 0.
+            self.time_estimator.update(self.config.n_env)
+
+        video_recorder.close()
+
         env.close()
+
+    # video_path = 'ppo_{0}_{1}_{2:d}.mp4'.format(config.name, config.model, i)
+    # video_recorder = VideoRecorder(self._env, video_path, enabled=video_path is not None)
+    # state0 = torch.tensor(self._env.reset(), dtype=torch.float32).unsqueeze(0).to(config.device)
+    # done = False
+    #
+    # while not done:
+    #     self._env.render()
+    #     video_recorder.capture_frame()
+    #     _, action0, _ = agent.get_action(state0)
+    #     next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
+    #     state0 = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0).to(config.device)
+    # video_recorder.close()
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + '.pth')

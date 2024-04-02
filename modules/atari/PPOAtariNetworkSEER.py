@@ -63,6 +63,19 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         init_orthogonal(self.forward_model[2], gain)
         init_orthogonal(self.forward_model[4], gain)
 
+        # self.backward_model = nn.Sequential(
+        #     nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.forward_model_dim),
+        #     nn.GELU(),
+        #     nn.Linear(self.forward_model_dim, self.forward_model_dim),
+        #     nn.GELU(),
+        #     nn.Linear(self.forward_model_dim, self.feature_dim),
+        # )
+        #
+        # gain = sqrt(2)
+        # init_orthogonal(self.backward_model[0], gain)
+        # init_orthogonal(self.backward_model[2], gain)
+        # init_orthogonal(self.backward_model[4], gain)
+
         self.hidden_model = nn.Sequential(
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.GELU(),
@@ -76,7 +89,7 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         init_orthogonal(self.hidden_model[2], gain)
         init_orthogonal(self.hidden_model[4], gain)
 
-    def forward(self, state=None, action=None, next_state=None, zt_state=None, zl_state=None, stage=0):
+    def forward(self, state=None, action=None, next_state=None, h_next_state=None, zt_state=None, zl_state=None, stage=0):
         if stage == 0:
             z_state = self.ppo_encoder(state)
             zt_state = self.target_model(self.preprocess(state))
@@ -88,10 +101,12 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         if stage == 1:
             p_state = self.learned_projection(zl_state)
             z_next_state = self.target_model(self.preprocess(next_state))
-            h_next_state = torch.zeros((zl_state.shape[0], self.hidden_dim), dtype=torch.float32, device=self.config.device)
+            # h_next_state = torch.zeros((zl_state.shape[0], self.hidden_dim), dtype=torch.float32, device=self.config.device)
             # z_action = self.action_projection(action)
+            h_next_state = h_next_state.unsqueeze(0).expand(zl_state.shape[0], -1)
             p_next_state = self.forward_model(torch.cat([zl_state, action, h_next_state], dim=1))
             h_next_state = self.hidden_model(z_next_state)
+            # b_state = self.backward_model(torch.cat([p_next_state, action, h_next_state], dim=1))
 
             return p_state, z_next_state, h_next_state, p_next_state
 
@@ -104,6 +119,7 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
             h_next_state = self.hidden_model(z_next_state)
             # z_action = self.action_projection(action)
             p_next_state = self.forward_model(torch.cat([zl_state, action, h_next_state], dim=1))
+            # b_state = self.backward_model(torch.cat([p_next_state, action, h_next_state], dim=1))
 
             return zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state
 

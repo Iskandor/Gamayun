@@ -6,6 +6,7 @@ key_values = {
     'ri': 'mean',
     'error': 'mean',
     'forward_reward': 'mean',
+    'forward_space': 'mean',
     'loss_prediction': 'val',
     'loss_target': 'val',
     'loss_reg': 'val',

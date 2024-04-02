@@ -55,11 +55,14 @@ class RunningStats:
     def __init__(self, shape, device, n=1):
         self.device = device
         self.n = n
-        if n > 1:
-            shape = (n,) + shape
-            self.count = torch.ones((n, 1), device=device)
-        else:
-            self.count = 1
+        shape = (n,) + shape
+        self.count = torch.ones((n, 1), device=device)
+
+        # if n > 1:
+        #     shape = (n,) + shape
+        #     self.count = torch.ones((n, 1), device=device)
+        # else:
+        #     self.count = 1
         self.eps = 0.0000001
         self.max = torch.zeros(shape, device=device)
         self.sum = torch.zeros(shape, device=device)

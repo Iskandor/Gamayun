@@ -4,8 +4,9 @@ from abc import ABC
 import torch
 
 
-class StateNorm(metaclass=abc.ABCMeta):
+class Norm(metaclass=abc.ABCMeta):
     def __init__(self, shape, device):
+        self._device = device
         self._eps = 0.0000001
         self._mean = torch.zeros(shape, device=device)
         self._var = 0.01 * torch.ones(shape, device=device)
@@ -25,8 +26,23 @@ class StateNorm(metaclass=abc.ABCMeta):
     def process(self, x: torch.Tensor):
         return (x - self._mean) / self._std
 
+    def mean(self):
+        return self._mean
 
-class PreciseStateNorm(StateNorm, ABC):
+    def get_state(self):
+        return {
+            'mean': self._mean,
+            'var': self._var,
+            'std': self._std
+        }
+
+    def set_state(self, state):
+        self._mean = state['mean'].to(self._device)
+        self._var = state['var'].to(self._device)
+        self._std = state['std'].to(self._device)
+
+
+class PreciseNorm(Norm, ABC):
     def __init__(self, shape, device):
         super().__init__(shape, device)
         self._count = 1
@@ -43,7 +59,7 @@ class PreciseStateNorm(StateNorm, ABC):
         self._std = torch.sqrt(self._var / self._count) + self._eps
 
 
-class ExponentialDecayStateNorm(StateNorm, ABC):
+class ExponentialDecayNorm(Norm, ABC):
     def __init__(self, shape, device):
         super().__init__(shape, device)
         self._alpha = 0.99
@@ -55,4 +71,3 @@ class ExponentialDecayStateNorm(StateNorm, ABC):
         var = ((x - mean) ** 2).mean(axis=0)
         self._var = self._alpha * self._var + (1.0 - self._alpha) * var
         self._std = torch.sqrt(self._var) + self._eps
-

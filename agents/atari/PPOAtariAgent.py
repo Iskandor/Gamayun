@@ -7,19 +7,29 @@ from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from modules.PPO_AtariModules import PPOAtariNetwork
-from utils.StateNorm import PreciseStateNorm, ExponentialDecayStateNorm
+from utils.StateNorm import PreciseNorm, ExponentialDecayNorm
 
 
 class PPOAtariAgent(PPOAgentBase):
     def __init__(self, config):
         super().__init__(config)
         self.model = PPOAtariNetwork(config).to(config.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.lr)
-        self.algorithm = PPO(self.model, self._ppo_eval, config.lr, config.actor_loss_weight, config.critic_loss_weight, config.batch_size, config.trajectory_size,
-                             config.beta, config.gamma, ppo_epochs=config.ppo_epochs, n_env=config.n_env,
-                             device=config.device, motivation=False)
+        # self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.lr)
+        self.algorithm = PPO(self.model,
+                             self._ppo_eval,
+                             config.lr,
+                             config.actor_loss_weight,
+                             config.critic_loss_weight,
+                             config.batch_size,
+                             config.trajectory_size,
+                             config.beta,
+                             config.gamma,
+                             ppo_epochs=config.ppo_epochs,
+                             n_env=config.n_env,
+                             device=config.device,
+                             motivation=False)
 
-        self.state_average = PreciseStateNorm(config.input_shape, config.device)
+        self.state_average = PreciseNorm(config.input_shape, config.device)
 
     def _encode_state(self, state):
         return torch.tensor(state, dtype=torch.float32, device=self.config.device)
@@ -72,8 +82,21 @@ class PPOAtariAgent(PPOAgentBase):
                 self.algorithm.train(self.memory, indices)
                 self.memory.clear()
 
-        return next_state
+        return next_state, done
 
     def _ppo_eval(self, state):
         value, _, probs = self.model(state)
         return value, probs
+
+    def save(self, path):
+        state = {
+            'model_state': self.model.state_dict(),
+            'state_average': self.state_average.get_state(),
+        }
+        torch.save(state, path + '.pth')
+
+    def load(self, path):
+        state = torch.load(path + '.pth', map_location='cpu')
+
+        self.model.load_state_dict(state['model_state'])
+        self.state_average.set_state(state['state_average'])

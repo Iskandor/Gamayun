@@ -5,8 +5,11 @@ from pathlib import Path
 
 import numpy as np
 
-from agents.atari.PPOAtariAgent import PPOAtariSNDAgent, PPOAtariRNDAgent, PPOAtariICMAgent, PPOAtariSPAgent
 from agents.PPOProcgenAgent import PPOProcgenRNDAgent, PPOProcgenSNDAgent, PPOProcgenICMAgent, PPOProcgenSPAgent
+from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
+from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
+from agents.atari.PPOAtariSNDAgent import PPOAtariSNDAgent
+from agents.atari.PPOAtariSPAgent import PPOAtariSPAgent
 from analytic.FeatureAnalysis import FeatureAnalysis
 from analytic.MetricTensor import initialize
 from analytic.StateCollector import collect_states, collect_samples, save_states

@@ -54,7 +54,7 @@ class ChartTemplates:
                                               ('learned_space', 'darkgreen', 'learned space L2 norm'),
                                               ('forward_space', 'limegreen', 'forward space L2 norm')],
                                              ['mean', 'std'])
-        self.templates['seer'].add_element('next_space', ['mean', 'std'], 'green', 'next space L2 norm')
+        # self.templates['seer'].add_element('next_space', ['mean', 'std'], 'green', 'next space L2 norm')
         self.templates['seer'].add_element('hidden_space', ['mean', 'std'], 'green', 'hidden space L2 norm')
         self.templates['seer'].add_element('confidence', ['mean', 'std'], 'orange', 'confidence')
         self.templates['seer'].add_element('loss_target', ['val'], 'magenta', 'encoder loss')

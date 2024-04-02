@@ -15,7 +15,7 @@ class ExperimentServer:
         experiment = getattr(module, args.config.rstrip())(args.num_threads, args.device, args.shift, args.load)
 
         if args.inference:
-            thread_params = experiment, 0, args.device, args.gpus
+            thread_params = experiment, 0, args.device, args.gpus[0]
             self.run_inference(thread_params)
         else:
             if self.config.backend == 'torch':

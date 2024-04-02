@@ -242,8 +242,8 @@ def WrapperAtari(env, height=96, width=96, frame_stacking=4, frame_skipping=4, r
     return env
 
 
-def WrapperHardAtari(env_name, height=96, width=96, frame_stacking=4, max_steps=4500):
-    env = gym.make(env_name)
+def WrapperHardAtari(env_name, render_mode, height=96, width=96, frame_stacking=4, max_steps=4500):
+    env = gym.make(env_name, render_mode=render_mode)
     env = StickyActionEnv(env)
     env = RepeatActionEnv(env)
     env = ResizeEnv(env, height, width, frame_stacking)

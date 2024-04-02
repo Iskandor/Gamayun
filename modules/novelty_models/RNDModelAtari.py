@@ -11,7 +11,7 @@ from analytic.metric.NoveltyMetric import NoveltyMetric
 from modules import init_orthogonal
 from modules.encoders.EncoderAtari import ST_DIMEncoderAtari, BarlowTwinsEncoderAtari, VICRegEncoderAtari, SNDVEncoderAtari, AtariStateEncoderSmall, AMIEncoderAtari, AtariStateEncoderLarge, \
     AtariStateEncoderResNet, SpacVICRegEncoderAtari
-from utils.StateNorm import PreciseStateNorm
+from utils.StateNorm import PreciseNorm
 
 
 class RNDModelAtari(nn.Module):
@@ -25,7 +25,7 @@ class RNDModelAtari(nn.Module):
         input_height = self.input_shape[1]
         input_width = self.input_shape[2]
         self.feature_dim = 512
-        self.state_average = PreciseStateNorm((4, input_height, input_width), config.device)
+        self.state_average = PreciseNorm((4, input_height, input_width), config.device)
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
@@ -121,7 +121,7 @@ class STDModelAtari(nn.Module):
 
         fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = PreciseStateNorm((4, input_height, input_width), config.device)
+        self.state_average = PreciseNorm((4, input_height, input_width), config.device)
 
         self.target_model = ST_DIMEncoderAtari(self.input_shape, self.feature_dim)
 
@@ -262,7 +262,7 @@ class SNDVModelAtari(nn.Module):
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = PreciseStateNorm((4, input_height, input_width), config.device)
+        self.state_average = PreciseNorm((4, input_height, input_width), config.device)
 
         self.target_model = SNDVEncoderAtari(self.input_shape, self.feature_dim, config)
 
@@ -387,7 +387,7 @@ class BarlowTwinsModelAtari(nn.Module):
 
         fc_inputs_count = 128 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = PreciseStateNorm((4, input_height, input_width), config.device)
+        self.state_average = PreciseNorm((4, input_height, input_width), config.device)
 
         self.target_model = BarlowTwinsEncoderAtari(self.input_shape, self.feature_dim)
 
@@ -472,7 +472,7 @@ class VICRegModelAtari(nn.Module):
         input_width = config.input_shape[2]
         self.input_shape = (input_channels, input_height, input_width)
 
-        self.state_average = PreciseStateNorm((4, input_height, input_width), config.device)
+        self.state_average = PreciseNorm((4, input_height, input_width), config.device)
 
         self.target_model = encoder_class(self.input_shape, self.feature_dim)
         self.learned_model = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
@@ -640,7 +640,7 @@ class AMIModelAtari(nn.Module):
 
         fc_inputs_count = 64 * (input_width // 8) * (input_height // 8)
 
-        self.state_average = PreciseStateNorm((4, input_height, input_width), config.device)
+        self.state_average = PreciseNorm((4, input_height, input_width), config.device)
 
         self.target_model = VICRegEncoderAtari(self.input_shape, self.feature_dim)
 
