@@ -5,7 +5,7 @@ gym[atari, accept-rom-license]==0.26.2
 imageio~=2.16.1
 matplotlib~=3.5.1
 nes-py
-numpy~=1.21.5
+numpy~=1.24.4
 opencv-python~=4.5.5.64
 psutil~=5.9.0
 pyclustering
@@ -15,10 +15,12 @@ scikit-learn~=0.24.2
 torch==2.0.1+cu118
 torchvision==0.15.2+cu118
 tqdm~=4.61.1
-umap-learn
+umap-learn[plot]
 seaborn~=0.11.2
 setuptools~=61.2.0
 pillow~=9.1.0
 scipy~=1.8.0
 procgen~=0.10.7
 pyyaml~=5.4.1
+giotto-tda
+kaleido

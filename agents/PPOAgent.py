@@ -3,7 +3,6 @@ from enum import Enum
 
 import numpy
 import torch
-from gym.wrappers.monitoring.video_recorder import VideoRecorder
 
 from agents import ActorType
 from algorithms.ReplayBuffer import GenericTrajectoryBuffer
@@ -167,29 +166,24 @@ class PPOAgentBase:
 
     def _check_terminal_states(self, env, mode, done, next_state):
         env_indices = numpy.nonzero(numpy.squeeze(done, axis=1))[0]
-        self.step_counter.update(self.config.n_env)
-        stats = self.analytics.reset(env_indices)
+
+        if mode == AgentMode.TRAINING:
+            self.step_counter.update(self.config.n_env)
+            stats = self.analytics.reset(env_indices)
+
+            for i, index in enumerate(env_indices):
+                agent_score = stats['re'].sum[i] / stats['re'].step[i]
+                self.reward_avg.update(stats['re'].sum[i])
+
+                if self.best_agent_score < agent_score:
+                    self.best_agent_score = agent_score
+                    self.save('./models/{0:s}'.format(self.name))
+
+                self.info.print(stats, i)
+                print(self.time_estimator)
 
         for i, index in enumerate(env_indices):
-            agent_score = stats['re'].sum[i] / stats['re'].step[i]
-            self.reward_avg.update(stats['re'].sum[i])
-
-            if mode == AgentMode.TRAINING and self.best_agent_score < agent_score:
-                self.best_agent_score = agent_score
-                self.save('./models/{0:s}'.format(self.name))
-
-            self.info.print(stats, i)
-            print(self.time_estimator)
             next_state[i], metadata = env.reset(index)
-
-    # def _convert_action(self, action):
-    #     if self.action_type == ActorType.discrete:
-    #         a = torch.argmax(action, dim=1).numpy()
-    #         return a
-    #     if self.action_type == ActorType.continuous:
-    #         return action.squeeze(0).numpy()
-    #     if self.action_type == ActorType.multibinary:
-    #         return torch.argmax(action, dim=1).numpy()
 
     def training_loop(self, env, name, trial):
         self.name = name
@@ -210,9 +204,6 @@ class PPOAgentBase:
         env.close()
 
     def inference_loop(self, env, name, trial):
-        video_path = name + '.mp4'
-        video_recorder = VideoRecorder(env.envs_list[0], video_path, enabled=video_path is not None)
-
         self.info = self._initialize_info(trial)
         self.analytics = self._initialize_analysis()
 
@@ -221,27 +212,11 @@ class PPOAgentBase:
 
         while not stop:
             env.render(0)
-            video_recorder.capture_frame()
             state, done = self._step(env, trial, state, AgentMode.INFERENCE)
             stop = done.item() == 0.
             self.time_estimator.update(self.config.n_env)
 
-        video_recorder.close()
-
         env.close()
-
-    # video_path = 'ppo_{0}_{1}_{2:d}.mp4'.format(config.name, config.model, i)
-    # video_recorder = VideoRecorder(self._env, video_path, enabled=video_path is not None)
-    # state0 = torch.tensor(self._env.reset(), dtype=torch.float32).unsqueeze(0).to(config.device)
-    # done = False
-    #
-    # while not done:
-    #     self._env.render()
-    #     video_recorder.capture_frame()
-    #     _, action0, _ = agent.get_action(state0)
-    #     next_state, reward, done, info = self._env.step(agent.convert_action(action0.cpu()))
-    #     state0 = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0).to(config.device)
-    # video_recorder.close()
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + '.pth')

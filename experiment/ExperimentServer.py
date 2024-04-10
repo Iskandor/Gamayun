@@ -17,6 +17,9 @@ class ExperimentServer:
         if args.inference:
             thread_params = experiment, 0, args.device, args.gpus[0]
             self.run_inference(thread_params)
+        elif args.analysis != 'none':
+            thread_params = experiment, args.analysis, args.device, args.gpus[0]
+            self.run_analysis(thread_params)
         else:
             if self.config.backend == 'torch':
                 self.run_training_torch_parallel(experiment, args.trials, args.device, args.gpus, args.trials_per_gpu)
@@ -74,4 +77,13 @@ class ExperimentServer:
             torch.cuda.set_device(gpu)
 
         experiment.inference(i)
+
+    @staticmethod
+    def run_analysis(thread_params):
+        experiment, task, device, gpu = thread_params
+
+        if device == 'cuda':
+            torch.cuda.set_device(gpu)
+
+        experiment.analysis(task)
 

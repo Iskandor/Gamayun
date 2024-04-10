@@ -1,6 +1,7 @@
 import time
 
 import torch
+from gym.wrappers.monitoring.video_recorder import VideoRecorder
 
 from agents.PPOAgent import PPOAgentBase, AgentMode
 from algorithms.PPO import PPO
@@ -100,3 +101,24 @@ class PPOAtariAgent(PPOAgentBase):
 
         self.model.load_state_dict(state['model_state'])
         self.state_average.set_state(state['state_average'])
+
+    def inference_loop(self, env, name, trial):
+        video_path = name + '.mp4'
+        video_recorder = VideoRecorder(env.envs_list[0], video_path, enabled=video_path is not None)
+
+        self.info = self._initialize_info(trial)
+        self.analytics = self._initialize_analysis()
+
+        state = self._encode_state(self._initialize_env(env))
+        stop = False
+
+        while not stop:
+            env.render(0)
+            video_recorder.capture_frame()
+            state, done = self._step(env, trial, state, AgentMode.INFERENCE)
+            stop = done.item() == 0.
+            self.time_estimator.update(self.config.n_env)
+
+        video_recorder.close()
+
+        env.close()

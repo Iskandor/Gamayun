@@ -1,6 +1,6 @@
-import time
-
+import numpy as np
 import torch
+from tqdm import tqdm
 
 from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
@@ -161,3 +161,86 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         self.model.load_state_dict(state['model_state'])
         self.state_average.set_state(state['state_average'])
         self.hidden_average.set_state(state['hidden_average'])
+
+    def analytic_loop(self, env, name, task):
+        if task == 'collect_states':
+            states = []
+            actions = []
+            next_states = []
+            room_ids = []
+            state_raw = self._initialize_env(env)
+            state = self._encode_state(state_raw)
+            stop = False
+
+            while not stop:
+                states.append(np.copy(state_raw))
+                next_state, done, next_state_raw, action, info = self._collect_state_step(env, state, AgentMode.INFERENCE)
+                actions.append(action.cpu().numpy())
+                stop = done.item() == 0.
+
+                state = next_state
+                state_raw = next_state_raw
+                next_states.append(np.copy(next_state_raw))
+                room_ids.append(info['room_id'])
+
+            np.save('{0:s}_{1:s}{2:s}'.format(name, task, '.npy'),
+                    {
+                        'states': states,
+                        'actions': actions,
+                        'next_states': next_states,
+                        'room_ids': room_ids,
+                    })
+
+        if task == 'collect_representations':
+            data = np.load('{0:s}_{1:s}{2:s}'.format(name, 'collect_states', '.npy'), allow_pickle=True).item()
+            states, actions, next_states, room_ids = data['states'], data['actions'], data['next_states'], data['room_ids']
+            n = len(states)
+
+            target_repr = []
+            target_next_repr = []
+            predicted_repr = []
+            predicted_next_repr = []
+
+            for state, action, next_state in tqdm(zip(states, actions, next_states), total=n):
+                zt_state, _, p_state, zt_next_state, _, p_next_state = self._collect_representation_step(state, action, next_state)
+                target_repr.append(zt_state.cpu().numpy())
+                target_next_repr.append(zt_next_state.cpu().numpy())
+                predicted_repr.append(p_state.cpu().numpy())
+                predicted_next_repr.append(p_next_state.cpu().numpy())
+
+            np.save('{0:s}_{1:s}{2:s}'.format(name, task, '.npy'),
+                    {
+                        'target_repr': target_repr,
+                        'target_next_repr': target_next_repr,
+                        'predicted_repr': predicted_repr,
+                        'predicted_next_repr': predicted_next_repr,
+                        'room_ids': room_ids,
+                    })
+
+        env.close()
+
+    def _collect_state_step(self, env, state, mode):
+        with torch.no_grad():
+            _, action, _, _, _ = self.model(state=state, stage=0)
+            next_state_raw, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
+            self._check_terminal_states(env, mode, done, next_state_raw)
+
+            next_state = self._encode_state(next_state_raw)
+            next_state = self.state_average.process(next_state).clip_(-4., 4.)
+
+        done = torch.tensor(1 - done, dtype=torch.float32)
+
+        return next_state, done, next_state_raw, action, info
+
+    def _collect_representation_step(self, state, action, next_state):
+        state = self._encode_state(state)
+        state = self.state_average.process(state).clip_(-4., 4.)
+        next_state = self._encode_state(next_state)
+        next_state = self.state_average.process(next_state).clip_(-4., 4.)
+        action = torch.tensor(action, device=self.config.device)
+        with torch.no_grad():
+            _, _, _, zt_state, zl_state = self.model(state=state, stage=0)
+            p_state, z_next_state, h_next_state, p_next_state = self.model(zl_state=zl_state, action=action, next_state=next_state, h_next_state=self.hidden_average.mean(), stage=1)
+            # int_reward, distillation_error, forward_error, confidence = self.motivation.reward(zt_state, p_state, z_next_state, h_next_state, p_next_state)
+
+        return zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state

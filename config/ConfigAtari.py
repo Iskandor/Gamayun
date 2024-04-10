@@ -9,6 +9,7 @@ from agents.atari.PPOAtariSNDAgent import PPOAtariSNDAgent
 from config.ConfigBase import ConfigPPO
 from utils.AtariWrapper import WrapperHardAtari
 from utils.MultiEnvWrapper import MultiEnvParallel
+from utils.WrapperMontezuma import WrapperMontezuma
 
 
 class ConfigAtari(ConfigPPO):
@@ -31,7 +32,7 @@ class ConfigAtari(ConfigPPO):
 
     def init_environment(self):
         print('Creating {0:d} environments'.format(self.n_env))
-        self.env = MultiEnvParallel([WrapperHardAtari(self.env_name, render_mode=self.render_mode) for _ in range(self.n_env)], self.n_env, self.num_threads)
+        self.env = MultiEnvParallel([WrapperMontezuma(self.env_name, render_mode=self.render_mode) for _ in range(self.n_env)], self.n_env, self.num_threads)
 
         self.input_shape = self.env.observation_space.shape
         self.action_dim = self.env.action_space.n
@@ -200,6 +201,15 @@ class ConfigMontezumaSEER(ConfigAtari):
         if len(self.path) > 0:
             agent.load(self.path)
         agent.inference_loop(self.env, name, trial)
+
+    def analysis(self, task):
+        name = '{0:s}_{1:s}'.format(self.__class__.__name__, self.type)
+        print(name)
+
+        agent = PPOAtariSEERAgent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.analytic_loop(self.env, name, task)
 
 
 class ConfigMontezumaA2(ConfigAtari):
