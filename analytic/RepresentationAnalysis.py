@@ -41,16 +41,7 @@ class RepresentationAnalysis:
         mapper_pipeline.fit(data)
         # y = mapper_pipeline.transform(self.predictions)
 
-        cmap = matplotlib.cm.get_cmap('Spectral')
-        rgba = cmap(0.5)
-
-        color_data = []
-
-        max_room = np.max(self.room_ids)
-        for room_id in self.room_ids:
-            color_data.append(cmap(room_id/max_room))
-
-
+        color_data = self._room_colormap()
         # Plot the Mapper graph
         # plotly_params = {"node_trace": {"marker_colorscale": "Blues"}}
         fig = plot_static_mapper_graph(
@@ -66,17 +57,49 @@ class RepresentationAnalysis:
         fig.show(config={'scrollZoom': True})
         # fig.write_image(title + '.png')
 
+    def _room_colormap(self):
+        cmap = matplotlib.cm.get_cmap('coolwarm')
+
+        color_data = []
+
+        max_room = np.max(self.room_ids)
+        for room_id in self.room_ids:
+            color_data.append(cmap(room_id/max_room))
+
+        return color_data
+
     def umap(self):
         reducer = umap.UMAP()
 
+        color_data = self._room_colormap()
         target_embedding = reducer.fit_transform(self.targets)
         next_target_embedding = reducer.transform(self.next_targets)
-        pred_embedding = reducer.transform(self.predictions)
+        # pred_embedding = reducer.transform(self.predictions)
         next_pred_embedding = reducer.transform(self.next_predictions)
 
-        plt.scatter(target_embedding[:, 0], target_embedding[:, 1], c='blue', s=1, alpha=0.8)
-        plt.scatter(next_target_embedding[:, 0], next_target_embedding[:, 1], c='magenta', s=1, alpha=0.8)
-        plt.scatter(pred_embedding[:, 0], pred_embedding[:, 1], c='red', s=1, alpha=0.8)
-        plt.scatter(next_pred_embedding[:, 0], next_pred_embedding[:, 1], c='green', s=1, alpha=0.8)
+        # plt.scatter(target_embedding[:, 0], target_embedding[:, 1], c='blue', s=1, alpha=0.8)
+        plt.scatter(next_target_embedding[:, 0], next_target_embedding[:, 1], c='red', s=1, alpha=0.8, label='target')
+        # plt.scatter(pred_embedding[:, 0], pred_embedding[:, 1], c='red', s=1, alpha=0.8)
+        plt.scatter(next_pred_embedding[:, 0], next_pred_embedding[:, 1], c='blue', s=1, alpha=0.8, label='prediction')
+        plt.legend()
         plt.gca().set_aspect('equal', 'datalim')
         plt.show()
+
+    def confidence_plot(self):
+        font = {'family': 'serif',
+                'color': 'darkred',
+                'weight': 'normal',
+                'size': 16,
+                }
+
+        error = np.linalg.norm(self.next_predictions - self.next_targets, ord=2, axis=1)
+
+        n = self.next_targets.shape[0]
+
+        b, a = np.polyfit(range(n), error, deg=1)
+        plt.scatter(x=range(n), y=error, s=1, cmap='coolwarm')
+        plt.plot(range(n), a + b * range(n), color="k", lw=2.5)
+        plt.xlabel('state order', fontdict=font)
+        plt.ylabel('prediction error', fontdict=font)
+        plt.show()
+

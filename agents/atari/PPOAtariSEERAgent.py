@@ -7,8 +7,8 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.SEERLoss import SEERLoss
-from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER
+from loss.SEERLoss import SEERLoss, SEERLossV8
+from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER, PPOAtariNetworkSEER_V8
 from motivation.SEERMotivation import SEERMotivation
 from utils.StateNorm import ExponentialDecayNorm
 
@@ -50,8 +50,8 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             ('target_space', ['mean', 'std'], 'target space', 0),
             ('distillation_space', ['mean', 'std'], 'distillation space', 0),
             ('forward_space', ['mean', 'std'], 'forward space', 0),
-            ('learned_space', ['mean', 'std'], 'learned space', 0),
-            # ('backward_space', ['mean', 'std'], 'backward space', 0),
+            # ('learned_space', ['mean', 'std'], 'learned space', 0),
+            ('target_forward_space', ['mean', 'std'], 'target forward space', 0),
             ('hidden_space', ['mean', 'std'], 'hidden space', 0),
             ('distillation_reward', ['mean', 'std'], 'dist. error', 0),
             ('forward_reward', ['mean', 'std'], 'forward error', 0),
@@ -69,9 +69,9 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                       ri=(1,),
                       target_space=(1,),
                       distillation_space=(1,),
-                      learned_space=(1,),
+                      # learned_space=(1,),
                       forward_space=(1,),
-                      # backward_space=(1,),
+                      target_forward_space=(1,),
                       hidden_space=(1,),
                       distillation_reward=(1,),
                       forward_reward=(1,),
@@ -81,7 +81,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
 
     def _step(self, env, trial, state, mode):
         with torch.no_grad():
-            value, action, probs, zt_state, zl_state = self.model(state=state, stage=0)
+            value, action, probs, z_state = self.model(state, stage=0)
             next_state, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
             self._check_terminal_states(env, mode, done, next_state)
 
@@ -91,23 +91,23 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             if mode == AgentMode.TRAINING:
                 self.state_average.update(next_state)
 
-            p_state, z_next_state, h_next_state, p_next_state = self.model(zl_state=zl_state, action=action, next_state=next_state, h_next_state=self.hidden_average.mean(), stage=1)
+            pz_state, z_next_state, h_next_state, pz_next_state = self.model(state, action, next_state, h_next_state=self.hidden_average.mean(), stage=1)
 
             if mode == AgentMode.TRAINING:
                 self.hidden_average.update(h_next_state)
 
-            int_reward, distillation_error, forward_error, confidence = self.motivation.reward(zt_state, p_state, z_next_state, h_next_state, p_next_state)
+            int_reward, distillation_error, forward_error, confidence = self.motivation.reward(z_state, pz_state, z_next_state, h_next_state, pz_next_state)
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
         reward = torch.cat([ext_reward, int_reward.cpu()], dim=1)
         score = torch.tensor(info['raw_score']).unsqueeze(-1)
         done = torch.tensor(1 - done, dtype=torch.float32)
 
-        target_features = torch.norm(zt_state, p=2, dim=1, keepdim=True)
-        distillation_features = torch.norm(p_state, p=2, dim=1, keepdim=True)
-        learned_features = torch.norm(zl_state, p=2, dim=1, keepdim=True)
-        forward_features = torch.norm(p_next_state, p=2, dim=1, keepdim=True)
-        # backward_features = torch.norm(b_state, p=2, dim=1, keepdim=True)
+        target_features = torch.norm(z_state, p=2, dim=1, keepdim=True)
+        distillation_features = torch.norm(pz_state, p=2, dim=1, keepdim=True)
+        # learned_features = torch.norm(zl_state, p=2, dim=1, keepdim=True)
+        forward_features = torch.norm(pz_next_state, p=2, dim=1, keepdim=True)
+        target_forward_features = torch.norm(z_next_state, p=2, dim=1, keepdim=True)
         hidden_features = torch.norm(h_next_state, p=2, dim=1, keepdim=True)
         self.analytics.update(
             re=ext_reward,
@@ -115,9 +115,9 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             score=score,
             target_space=target_features,
             distillation_space=distillation_features,
-            learned_space=learned_features,
+            # learned_space=learned_features,
             forward_space=forward_features,
-            # backward_space=backward_features,
+            target_forward_space=target_forward_features,
             hidden_space=hidden_features,
             distillation_reward=distillation_error,
             forward_reward=forward_error,
@@ -144,7 +144,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         return next_state, done
 
     def _ppo_eval(self, state):
-        value, _, probs, _, _ = self.model(state=state, stage=0)
+        value, _, probs, _ = self.model(state=state, stage=0)
         return value, probs
 
     def save(self, path):
@@ -202,9 +202,9 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             predicted_next_repr = []
 
             for state, action, next_state in tqdm(zip(states, actions, next_states), total=n):
-                zt_state, _, p_state, zt_next_state, _, p_next_state = self._collect_representation_step(state, action, next_state)
-                target_repr.append(zt_state.cpu().numpy())
-                target_next_repr.append(zt_next_state.cpu().numpy())
+                z_state, p_state, z_next_state, _, p_next_state = self._collect_representation_step(state, action, next_state)
+                target_repr.append(z_state.cpu().numpy())
+                target_next_repr.append(z_next_state.cpu().numpy())
                 predicted_repr.append(p_state.cpu().numpy())
                 predicted_next_repr.append(p_next_state.cpu().numpy())
 
@@ -221,7 +221,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
 
     def _collect_state_step(self, env, state, mode):
         with torch.no_grad():
-            _, action, _, _, _ = self.model(state=state, stage=0)
+            _, action, _, _ = self.model(state=state, stage=0)
             next_state_raw, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
             self._check_terminal_states(env, mode, done, next_state_raw)
 
@@ -239,8 +239,8 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         next_state = self.state_average.process(next_state).clip_(-4., 4.)
         action = torch.tensor(action, device=self.config.device)
         with torch.no_grad():
-            _, _, _, zt_state, zl_state = self.model(state=state, stage=0)
-            p_state, z_next_state, h_next_state, p_next_state = self.model(zl_state=zl_state, action=action, next_state=next_state, h_next_state=self.hidden_average.mean(), stage=1)
+            _, _, _, z_state = self.model(state=state, stage=0)
+            p_state, z_next_state, h_next_state, p_next_state = self.model(state, action, next_state, h_next_state=self.hidden_average.mean(), stage=1)
             # int_reward, distillation_error, forward_error, confidence = self.motivation.reward(zt_state, p_state, z_next_state, h_next_state, p_next_state)
 
-        return zt_state, zl_state, p_state, z_next_state, h_next_state, p_next_state
+        return z_state, p_state, z_next_state, h_next_state, p_next_state

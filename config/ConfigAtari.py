@@ -32,7 +32,8 @@ class ConfigAtari(ConfigPPO):
 
     def init_environment(self):
         print('Creating {0:d} environments'.format(self.n_env))
-        self.env = MultiEnvParallel([WrapperMontezuma(self.env_name, render_mode=self.render_mode) for _ in range(self.n_env)], self.n_env, self.num_threads)
+        # self.env = MultiEnvParallel([WrapperMontezuma(self.env_name, render_mode=self.render_mode) for _ in range(self.n_env)], self.n_env, self.num_threads)
+        self.env = MultiEnvParallel([WrapperHardAtari(self.env_name, render_mode=self.render_mode) for _ in range(self.n_env)], self.n_env, self.num_threads)
 
         self.input_shape = self.env.observation_space.shape
         self.action_dim = self.env.action_space.n
@@ -165,7 +166,7 @@ class ConfigMontezumaICM(ConfigAtari):
 class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         # render_mode='rgb_array'
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode='rgb_array', steps=32, lr=1e-4, n_env=1, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode='rgb_array', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
                          path=path)
 
         self.learned_projection_dim = self.feature_dim
@@ -177,7 +178,7 @@ class ConfigMontezumaSEER(ConfigAtari):
         self.distillation_scale = 0.25
         self.forward_scale = 0.01
         self.forward_threshold = 0.1
-        self.type = 'asym_v5m8'
+        self.type = 'asym_v5m9'
 
         self.delta = 0.5
         # self.beta = 0.25
