@@ -176,9 +176,9 @@ class ConfigMontezumaSEER(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.distillation_scale = 0.25
-        self.forward_scale = 0.01
+        self.forward_scale = 0
         self.forward_threshold = 0.1
-        self.type = 'asym_v5m9'
+        self.type = 'asym_v5m11'
 
         self.delta = 0.5
         # self.beta = 0.25

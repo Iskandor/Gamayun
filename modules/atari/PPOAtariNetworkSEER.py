@@ -18,11 +18,11 @@ class ForwardModelSEER(nn.Module):
         self.forward_model_dim = config.forward_model_dim
 
         self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.feature_dim + self.hidden_dim, self.forward_model_dim),
+            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.forward_model_dim),
             nn.GELU(),
-            nn.Linear(self.forward_model_dim + self.forward_model_dim + self.hidden_dim, self.forward_model_dim),
+            nn.Linear(self.forward_model_dim + self.action_dim + self.hidden_dim, self.forward_model_dim),
             nn.GELU(),
-            nn.Linear(self.forward_model_dim + self.forward_model_dim + self.hidden_dim, self.feature_dim),
+            nn.Linear(self.forward_model_dim + self.action_dim + self.hidden_dim, self.feature_dim),
         )
 
         gain = sqrt(2)
@@ -88,12 +88,10 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
         init_orthogonal(self.hidden_model[2], gain)
         init_orthogonal(self.hidden_model[4], gain)
 
-    def forward(self, state=None, action=None, next_state=None, h_next_state=None, zt_state=None, zl_state=None, stage=0):
+    def forward(self, state=None, action=None, next_state=None, h_next_state=None, stage=0):
         if stage == 0:
-            z_state = self.target_model(self.preprocess(state))
-
             value, action, probs = super().forward(self.ppo_encoder(state))
-            return value, action, probs, z_state
+            return value, action, probs
 
         if stage == 1:
             batch = state.shape[0]
@@ -101,6 +99,7 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
             # distillation
             zl_state = self.learned_model(self.preprocess(state))
             pz_state = self.learned_projection(zl_state)
+            z_state = self.target_model(self.preprocess(state))
 
             # state prediction
             z_next_state = self.target_model(self.preprocess(next_state))
@@ -108,20 +107,17 @@ class PPOAtariNetworkSEER(PPOMotivationNetwork):
             pz_next_state = self.forward_model(zl_state, action, h_next_state)
             h_next_state = self.hidden_model(z_next_state)
 
-            return pz_state, z_next_state, h_next_state, pz_next_state
+            return z_state, pz_state, z_next_state, pz_next_state, h_next_state
 
         if stage == 2:
             # distillation
             zl_state = self.learned_model(self.preprocess(state))
             pz_state = self.learned_projection(zl_state)
             z_state = self.target_model(self.preprocess(state))
-            # z_state, map_state = z_state['out'], z_state['f5']
 
             # state prediction
             z_next_state = self.target_model(self.preprocess(next_state))
-            # z_next_state, map_next_state = z_next_state['out'], z_next_state['f5']
             h_next_state = self.hidden_model(z_next_state)
-
             pz_next_state = self.forward_model(zl_state, action, h_next_state)
 
             return z_state, pz_state, z_next_state, pz_next_state, h_next_state
@@ -257,3 +253,99 @@ class PPOAtariNetworkSEER_V8(PPOMotivationNetwork):
     def preprocess(state):
         return state[:, 0, :, :].unsqueeze(1)
         # return state
+
+class PPOAtariNetworkSEER_V9(PPOMotivationNetwork):
+    def __init__(self, config):
+        super().__init__(config)
+
+        input_channels = 1
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
+        postprocessor_input_shape = (input_channels, input_height, input_width)
+
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
+        self.hidden_dim = config.hidden_dim
+        self.learned_projection_dim = config.learned_projection_dim
+        self.forward_model_dim = config.forward_model_dim
+
+        self.input_shape = config.input_shape
+
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
+        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
+
+        self.projection1 = nn.Linear(self.target_model.hidden_size, self.target_model.local_layer_depth)  # x1 = global, x2=patch, n_channels = 32
+        self.projection2 = nn.Linear(self.target_model.local_layer_depth, self.target_model.local_layer_depth)
+
+        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
+
+        self.learned_projection = nn.Sequential(
+            nn.Linear(self.feature_dim, self.learned_projection_dim),
+            nn.GELU(),
+            nn.Linear(self.learned_projection_dim, self.feature_dim)
+        )
+
+        gain = sqrt(2)
+        init_orthogonal(self.learned_projection[0], gain)
+        init_orthogonal(self.learned_projection[2], gain)
+
+        self.forward_model = ForwardModelSEER(config)
+
+        self.hidden_model = nn.Sequential(
+            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.GELU(),
+            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.GELU(),
+            nn.Linear(self.feature_dim, self.hidden_dim),
+        )
+
+        gain = sqrt(2)
+        init_orthogonal(self.hidden_model[0], gain)
+        init_orthogonal(self.hidden_model[2], gain)
+        init_orthogonal(self.hidden_model[4], gain)
+
+    def forward(self, state=None, action=None, next_state=None, h_next_state=None, stage=0):
+        if stage == 0:
+            zt_state = self.target_model(self.preprocess(state))
+
+            value, action, probs = super().forward(self.ppo_encoder(state))
+            return value, action, probs, zt_state
+
+        if stage == 1:
+            batch = state.shape[0]
+
+            # distillation
+            pz_state = self.learned_projection(self.learned_model(self.preprocess(state)))
+
+            # state prediction
+            z_state = self.ppo_encoder(state)
+            z_next_state = self.ppo_encoder(next_state)
+            h_next_state = h_next_state.unsqueeze(0).expand(batch, -1)
+            pz_next_state = self.forward_model(z_state, action, h_next_state)
+            h_next_state = self.hidden_model(z_next_state)
+
+            return pz_state, z_next_state, h_next_state, pz_next_state
+
+        if stage == 2:
+            # distillation
+            pz_state = self.learned_projection(self.learned_model(self.preprocess(state)))
+            zt_state = self.target_model(self.preprocess(state))
+            zt_next_state = self.target_model(self.preprocess(next_state))
+            # z_state, map_state = z_state['out'], z_state['f5']
+
+            # state prediction
+            z_state = self.ppo_encoder(state)
+            z_next_state = self.ppo_encoder(next_state)
+            # z_next_state, map_next_state = z_next_state['out'], z_next_state['f5']
+            h_next_state = self.hidden_model(z_next_state)
+
+            pz_next_state = self.forward_model(z_state, action, h_next_state)
+
+            return zt_state, zt_next_state, pz_state, z_next_state, pz_next_state, h_next_state
+
+    @staticmethod
+    def preprocess(state):
+        return state[:, 0, :, :].unsqueeze(1)
+        # return state
+
+

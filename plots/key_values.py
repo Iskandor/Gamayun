@@ -8,6 +8,7 @@ key_values = {
     'forward_reward': 'mean',
     'forward_space': 'mean',
     'target_space': 'mean',
+    'target_forward_space': 'mean',
     'loss_prediction': 'val',
     'loss_target': 'val',
     'loss_reg': 'val',
