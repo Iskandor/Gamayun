@@ -8,7 +8,7 @@ from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from loss.SEERLoss import SEERLoss, SEERLossV8
-from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER, PPOAtariNetworkSEER_V8, PPOAtariNetworkSEER_V9
+from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER_V8, PPOAtariNetworkSEER_V9, PPOAtariNetworkSEER_V5M4, PPOAtariNetworkSEER_V5M13
 from motivation.SEERMotivation import SEERMotivation
 from utils.StateNorm import ExponentialDecayNorm
 
@@ -16,7 +16,7 @@ from utils.StateNorm import ExponentialDecayNorm
 class PPOAtariSEERAgent(PPOAtariAgent):
     def __init__(self, config):
         super().__init__(config)
-        self.model = PPOAtariNetworkSEER(config).to(config.device)
+        self.model = PPOAtariNetworkSEER_V5M4(config).to(config.device)
         self.motivation = SEERMotivation(self.model,
                                          SEERLoss(config, self.model),
                                          config.motivation_lr,

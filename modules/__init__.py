@@ -1,7 +1,37 @@
 from enum import Enum
+from math import sqrt
 
 import torch
 import torch.nn as nn
+
+
+class ResMLPBlock(nn.Module):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True, gain: float = sqrt(2)):
+        super(ResMLPBlock, self).__init__()
+
+        self.block = nn.Sequential(
+            nn.Linear(in_features, out_features, bias),
+            nn.GELU(),
+            nn.Linear(out_features, out_features, bias)
+        )
+
+        init_orthogonal(self.block[0], gain)
+        init_orthogonal(self.block[2], gain)
+
+        if in_features != out_features:
+            self.downsample = nn.Linear(in_features, out_features, bias)
+            init_orthogonal(self.downsample, gain)
+        else:
+            self.downsample = None
+
+    def forward(self, x):
+        if self.downsample is not None:
+            identity = self.downsample(x)
+        else:
+            identity = x
+
+        y = identity + self.block(x)
+        return y
 
 
 def init_custom(layer, weight_tensor):

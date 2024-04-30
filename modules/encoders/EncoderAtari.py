@@ -49,6 +49,48 @@ class AtariStateEncoderSmall(nn.Module):
         return out
 
 
+class AtariStateEncoderUniversal(nn.Module):
+    def __init__(self, input_shape, feature_dim, gain=0.5):
+        super().__init__()
+        self.feature_dim = feature_dim
+        self.input_channels = 1
+        self.input_height = input_shape[1]
+        self.input_width = input_shape[2]
+
+        self.final_conv_size = 128 * (self.input_width // 8) * (self.input_height // 8)
+        self.main = nn.Sequential(
+            nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1),
+            nn.GELU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.GELU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.GELU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.GELU(),
+            nn.Flatten(),
+            nn.Linear(self.final_conv_size, self.feature_dim),
+        )
+
+        # gain = nn.init.calculate_gain('relu')
+        init_orthogonal(self.main[0], gain)
+        init_orthogonal(self.main[2], gain)
+        init_orthogonal(self.main[4], gain)
+        init_orthogonal(self.main[6], gain)
+        init_orthogonal(self.main[9], gain)
+
+    def forward(self, inputs):
+        batch = inputs.shape[0]
+        frames = inputs.shape[1]
+
+        if frames != self.input_channels:
+            x = inputs.reshape(batch * frames, 1, self.input_height, self.input_width)
+            y = self.main(x).reshape(batch, frames * self.feature_dim)
+        else:
+            y = self.main(inputs)
+
+        return y
+
+
 class AtariStateEncoderLarge(nn.Module):
 
     def __init__(self, input_shape, feature_dim, gain=0.5):

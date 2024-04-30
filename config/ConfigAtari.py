@@ -26,6 +26,7 @@ class ConfigAtari(ConfigPPO):
         self.input_shape = None
         self.action_dim = None
         self.feature_dim = 512
+        self.ppo_feature_dim = self.feature_dim
         self.env = None
 
         self.init_environment()
@@ -173,12 +174,13 @@ class ConfigMontezumaSEER(ConfigAtari):
         self.forward_model_dim = self.feature_dim * 8
         self.hidden_dim = self.feature_dim // 4
         # self.hidden_dim = self.feature_dim // 2
+        # self.ppo_feature_dim = self.feature_dim * 4
 
         self.motivation_lr = 1e-4
         self.distillation_scale = 0.25
         self.forward_scale = 0
         self.forward_threshold = 0.1
-        self.type = 'asym_v5m11'
+        self.type = 'asym_v5m4a1'
 
         self.delta = 0.5
         # self.beta = 0.25
