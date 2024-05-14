@@ -7,8 +7,8 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.SEERLoss import SEERLoss, SEERLossV8
-from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER_V8, PPOAtariNetworkSEER_V9, PPOAtariNetworkSEER_V5M4, PPOAtariNetworkSEER_V5M13
+from loss.SEERLoss import SEERLoss, SEERLossV8, SEERLoss_V5M14
+from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER_V8, PPOAtariNetworkSEER_V9, PPOAtariNetworkSEER_V5M4, PPOAtariNetworkSEER_V5M13, PPOAtariNetworkSEER_V5M14
 from motivation.SEERMotivation import SEERMotivation
 from utils.StateNorm import ExponentialDecayNorm
 
@@ -75,7 +75,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                       hidden_space=(1,),
                       distillation_reward=(1,),
                       forward_reward=(1,),
-                      confidence=(1,)
+                      confidence=(1,),
                       )
         return analysis
 

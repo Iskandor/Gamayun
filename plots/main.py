@@ -17,8 +17,10 @@ def atari_env(plots=True, tables=True):
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m3', 'legend': 'seer v5 model 3'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4', 'legend': 'seer v5 model 4'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4b', 'legend': 'seer v5 model 4M'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a0', 'legend': 'seer v5 model A0'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a1', 'legend': 'seer v5 model A1'},
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a2', 'legend': 'seer v5 model ReLU'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a2', 'legend': 'seer v5 model A2'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a3', 'legend': 'seer v5 model A3'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m5', 'legend': 'seer v5 model 5'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m6', 'legend': 'seer v5 model 6'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m7', 'legend': 'seer v5 model 7'},
@@ -36,7 +38,7 @@ def atari_env(plots=True, tables=True):
     ]
 
     compute_table_values(config, keys=['re'])
-    plot('montezuma_v5m', config, labels=['external reward', 'intrinsic reward', 'forward reward', 'forward space', 'forward target space'], keys=['re', 'ri', 'forward_reward', 'forward_space', 'target_space'], plot_details=['seer_asym_v5m4a1'], window=10000)
+    plot('montezuma_v5m', config, labels=['external reward', 'intrinsic reward', 'forward reward', 'forward space', 'forward target space'], keys=['re', 'ri', 'forward_reward', 'forward_space', 'target_space'], plot_details=['seer_asym_v5m4a2'], window=10000)
     # plot('montezuma_seer', config, labels=['external reward', 'score', 'forward model loss', 'forward reward'], keys=['re', 'score', 'loss_forward', 'forward_reward'], plot_details=[], window=10000)
 
 

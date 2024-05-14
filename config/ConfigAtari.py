@@ -180,7 +180,7 @@ class ConfigMontezumaSEER(ConfigAtari):
         self.distillation_scale = 0.25
         self.forward_scale = 0
         self.forward_threshold = 0.1
-        self.type = 'asym_v5m4a1'
+        self.type = 'asym_v5m4a0'
 
         self.delta = 0.5
         # self.beta = 0.25
