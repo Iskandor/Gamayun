@@ -167,7 +167,7 @@ class ConfigMontezumaICM(ConfigAtari):
 class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         # render_mode='rgb_array'
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode='rgb_array', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode='rgb_array', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
                          path=path)
 
         self.learned_projection_dim = self.feature_dim
@@ -178,9 +178,9 @@ class ConfigMontezumaSEER(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.distillation_scale = 0.25
-        self.forward_scale = 0
-        self.forward_threshold = 0.1
-        self.type = 'asym_v5m4a0'
+        self.forward_scale = 0.025
+        self.forward_threshold = 1
+        self.type = 'asym_v5m4f1'
 
         self.delta = 0.5
         # self.beta = 0.25
@@ -217,17 +217,19 @@ class ConfigMontezumaSEER(ConfigAtari):
 
 class ConfigMontezumaA2(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode=None, steps=8, lr=0, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode=None, steps=32, lr=1e-4, n_env=32, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
-        self.hidden_dim = 64
+        self.hidden_dim = self.feature_dim // 4
         self.motivation_lr = 1e-4
-        self.motivation_scale = 0.25
-        self.type = 'asym'
+        self.motivation_scale = 1
+        self.type = 'sym'
 
         self.alpha = 0.5
         self.eta = 0.01
 
     def train(self, trial):
+        super().train(trial)
+
         trial += self.shift
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
 

@@ -26,16 +26,12 @@ class A2Motivation:
             end = time.time()
             print("A2 motivation training time {0:.2f}s".format(end - start))
 
-    def error(self, state):
-        return self._network.error(state)
+    @staticmethod
+    def error(za_state, zb_state, pa_state, pb_state):
+        associative_error = (torch.abs(pa_state - za_state) + 1e-8).pow(2).mean(dim=1, keepdim=True) + (torch.abs(pb_state - zb_state) + 1e-8).pow(2).mean(dim=1, keepdim=True)
 
-    def reward_sample(self, memory, indices):
-        sample = memory.sample(indices)
+        return associative_error * 0.5
 
-        states = sample.state.to(self._device)
-
-        return self.reward(states)
-
-    def reward(self, state):
-        reward = self.error(state)
-        return (reward * self._scale).clip(0., 1.)
+    def reward(self, za_state, zb_state, pa_state, pb_state):
+        reward = self.error(za_state, zb_state, pa_state, pb_state)
+        return reward.clip(0., 1.) * self._scale

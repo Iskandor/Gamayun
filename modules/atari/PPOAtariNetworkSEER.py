@@ -27,7 +27,7 @@ class ForwardModelSEER(nn.Module):
             nn.Linear(self.forward_model_dim + self.action_dim + self.hidden_dim, self.feature_dim),
         )
 
-        gain = 0.5
+        gain = sqrt(2)
         init_orthogonal(self.forward_model[0], gain)
         init_orthogonal(self.forward_model[2], gain)
         init_orthogonal(self.forward_model[4], gain)
