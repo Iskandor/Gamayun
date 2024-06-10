@@ -17,7 +17,6 @@ class PPOAtariAgent(PPOAgentBase):
         self.model = PPOAtariNetwork(config).to(config.device)
         # self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.lr)
         self.algorithm = PPO(self.model,
-                             self._ppo_eval,
                              config.lr,
                              config.actor_loss_weight,
                              config.critic_loss_weight,
@@ -84,10 +83,6 @@ class PPOAtariAgent(PPOAgentBase):
                 self.memory.clear()
 
         return next_state, done
-
-    def _ppo_eval(self, state):
-        value, _, probs = self.model(state)
-        return value, probs
 
     def save(self, path):
         state = {

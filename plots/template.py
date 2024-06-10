@@ -38,8 +38,8 @@ class ChartTemplates:
         self.templates['a2'].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates['a2'].add_element('score', ['sum'], 'blue', 'score')
         self.templates['a2'].add_element('ri', ['mean', 'std'], 'red', 'intrinsic reward')
-        self.templates['a2'].add_element('feature_a_norm', ['mean', 'std'], 'green', 'feature space A L2 norm')
-        self.templates['a2'].add_element('feature_b_norm', ['mean', 'std'], 'green', 'feature space B L2 norm')
+        self.templates['a2'].add_composite([('za_state_norm', 'darkgreen', 'zA space L2 norm'),
+                                            ('zb_state_norm', 'limegreen', 'zB space L2 norm')], ['mean', 'std'])
         self.templates['a2'].add_element('loss_encoder', ['val'], 'magenta', 'encoder loss')
         self.templates['a2'].add_element('loss_hidden', ['val'], 'magenta', 'hidden loss')
         self.templates['a2'].add_element('loss_associative', ['val'], 'magenta', 'associative loss')

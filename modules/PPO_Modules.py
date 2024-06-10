@@ -1,3 +1,5 @@
+from enum import Enum
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -6,6 +8,12 @@ from torch.distributions import Categorical, Normal
 from agents import ActorType
 from modules import init_orthogonal, init_uniform
 from utils import one_hot_code
+
+
+class ActivationStage(Enum):
+    INFERENCE = 0
+    MOTIVATION_INFERENCE = 1
+    MOTIVATION_TRAINING = 2
 
 
 class DiscreteHead(nn.Module):
@@ -180,6 +188,8 @@ class PPONetwork(torch.nn.Module):
         self.feature_dim = config.feature_dim
         self.ppo_feature_dim = config.ppo_feature_dim
 
+        self.ppo_encoder = None
+
         self.critic = nn.Sequential(
             nn.ReLU(),
             nn.Linear(self.ppo_feature_dim, self.feature_dim),
@@ -208,6 +218,10 @@ class PPONetwork(torch.nn.Module):
         action = self.actor.encode_action(action)
 
         return value, action, probs
+
+    def ppo_eval(self, state):
+        value, _, probs = PPONetwork.forward(self, self.ppo_encoder(state))
+        return value, probs
 
 
 class PPOMotivationNetwork(PPONetwork):

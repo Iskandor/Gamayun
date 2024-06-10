@@ -25,7 +25,6 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                                          config.forward_threshold,
                                          config.device)
         self.algorithm = PPO(self.model,
-                             self._ppo_eval,
                              config.lr,
                              config.actor_loss_weight,
                              config.critic_loss_weight,

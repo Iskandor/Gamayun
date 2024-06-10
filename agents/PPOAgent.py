@@ -250,7 +250,7 @@ class PPOAgentBase:
 
         for epoch in range(self.config.ppo_epochs):
             for i in range(n):
-                new_values, new_probs = self._ppo_eval(states[i].to(self.config.device))
+                new_values, new_probs = self.model.ppo_eval(states[i].to(self.config.device))
                 self.optimizer.zero_grad()
                 loss = self.algorithm.loss(
                     new_values,
@@ -265,6 +265,3 @@ class PPOAgentBase:
 
         end = time.time()
         print("Trajectory {0:d} batch size {1:d} epochs {2:d} training time {3:.2f}s".format(self.config.trajectory_size, self.config.batch_size, self.config.ppo_epochs, end - start))
-
-    def _ppo_eval(self, state):
-        raise NotImplementedError

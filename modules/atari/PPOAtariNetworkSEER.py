@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torchvision.transforms.functional import to_pil_image
 
 from modules import init_orthogonal, ResMLPBlock
-from modules.PPO_Modules import PPOMotivationNetwork
+from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
 from modules.encoders.EncoderAtari import AtariStateEncoderLarge, AtariStateEncoderUniversal
 
 
@@ -321,13 +321,13 @@ class PPOAtariNetworkSEER_V5M13(PPOMotivationNetwork):
         init_orthogonal(self.hidden_model[3], gain)
         init_orthogonal(self.hidden_model[5], gain)
 
-    def forward(self, state=None, action=None, next_state=None, h_next_state=None, stage=0):
-        if stage == 0:
+    def forward(self, state=None, action=None, next_state=None, h_next_state=None, stage=ActivationStage.INFERENCE):
+        if stage == ActivationStage.INFERENCE:
             z = self.ppo_encoder(self.target_model(state).detach())
             value, action, probs = super().forward(z)
             return value, action, probs
 
-        if stage == 1:
+        if stage == ActivationStage.MOTIVATION_INFERENCE:
             batch = state.shape[0]
 
             # distillation
@@ -343,7 +343,7 @@ class PPOAtariNetworkSEER_V5M13(PPOMotivationNetwork):
 
             return z_state, pz_state, z_next_state, pz_next_state, h_next_state
 
-        if stage == 2:
+        if stage == ActivationStage.MOTIVATION_TRAINING:
             # distillation
             zl_state = self.learned_model(self.preprocess(state))
             pz_state = self.learned_projection(zl_state)

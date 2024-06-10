@@ -21,7 +21,6 @@ class PPOAtariA2Agent(PPOAtariAgent):
                                        config.device)
 
         self.algorithm = PPO(self.model,
-                             self._ppo_eval,
                              config.lr,
                              config.actor_loss_weight,
                              config.critic_loss_weight,

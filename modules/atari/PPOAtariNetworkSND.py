@@ -1,32 +1,53 @@
-from modules.PPO_Modules import PPOMotivationNetwork
-from modules.encoders.EncoderAtari import VICRegEncoderAtari, VICRegEncoderAtariV2
-from modules.novelty_models.RNDModelAtari import BarlowTwinsModelAtari, VICRegModelAtari, SpacVICRegModelAtari, STDModelAtari, SNDVModelAtari, VINVModelAtari, TPModelAtari, AMIModelAtari
+import torch.nn as nn
+from math import sqrt
+
+from modules import init_orthogonal
+from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
+from modules.encoders.EncoderAtari import AtariStateEncoderLarge
 
 
 class PPOAtariNetworkSND(PPOMotivationNetwork):
     def __init__(self, config):
         super(PPOAtariNetworkSND, self).__init__(config)
-        if config.type == 'bt':
-            self.cnd_model = BarlowTwinsModelAtari(config)
-        if config.type == 'vicreg':
-            self.cnd_model = VICRegModelAtari(config, encoder_class=VICRegEncoderAtari)
-        if config.type == 'vicreg2':
-            self.cnd_model = VICRegModelAtari(config, encoder_class=VICRegEncoderAtariV2)
-        if config.type == 'spacvicreg':
-            self.cnd_model = SpacVICRegModelAtari(config)
-        if config.type == 'st-dim':
-            self.cnd_model = STDModelAtari(config)
-        if config.type == 'vanilla':
-            self.cnd_model = SNDVModelAtari(config)
-        if config.type == 'vinv':
-            self.cnd_model = VINVModelAtari(config)
-        if config.type == 'tp':
-            self.cnd_model = TPModelAtari(config)
-        if config.type == 'ami':
-            self.cnd_model = AMIModelAtari(config)
 
-    def forward(self, state):
-        value, action, probs = super().forward(state)
-        features = self.cnd_model.target_model(self.cnd_model.preprocess(state))
+        input_channels = 1
+        input_height = config.input_shape[1]
+        input_width = config.input_shape[2]
+        postprocessor_input_shape = (input_channels, input_height, input_width)
 
-        return value, action, probs, features
+        self.input_shape = config.input_shape
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
+
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
+        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim)
+        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=sqrt(2))
+
+        self.learned_projection = nn.Sequential(
+            nn.GELU(),
+            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.GELU(),
+            nn.Linear(self.feature_dim, self.feature_dim)
+        )
+
+        gain = sqrt(2)
+        init_orthogonal(self.learned_projection[1], gain)
+        init_orthogonal(self.learned_projection[3], gain)
+
+    @staticmethod
+    def preprocess(state):
+        return state[:, 0, :, :].unsqueeze(1)
+
+    def forward(self, state=None, next_state=None, stage=ActivationStage.INFERENCE):
+        pz_state = self.learned_projection(self.learned_model(self.preprocess(state)))
+        zt_state = self.target_model(self.preprocess(state))
+
+        if stage == ActivationStage.INFERENCE:
+            value, action, probs = super().forward(self.ppo_encoder(state))
+
+            return value, action, probs, zt_state, pz_state
+
+        if stage == ActivationStage.MOTIVATION_TRAINING:
+            zt_next_state = self.target_model(self.preprocess(next_state))
+            return zt_state, pz_state, zt_next_state
+

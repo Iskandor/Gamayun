@@ -70,7 +70,7 @@ class ConfigMontezumaRND(ConfigAtari):
 
 class ConfigMontezumaSNDBaseline(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode=None, steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode=None, steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
                          path=path)
 
         self.motivation_lr = 1e-4

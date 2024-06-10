@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from analytic.ResultCollector import ResultCollector
 from loss.VICRegLoss import VICRegLoss
+from modules.PPO_Modules import ActivationStage
 
 
 class SEERLoss(nn.Module):
@@ -15,7 +16,7 @@ class SEERLoss(nn.Module):
         self.vicreg_loss = VICRegLoss()
 
     def __call__(self, states, action, next_states):
-        zt_state, pz_state, zt_next_state, pz_next_state, h_next_state = self.model(states, action, next_states, stage=2)
+        zt_state, pz_state, zt_next_state, pz_next_state, h_next_state = self.model(states, action, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         loss_target = self.vicreg_loss(zt_state, zt_next_state)
         loss_distillation = self._distillation_loss(pz_state, zt_state.detach())

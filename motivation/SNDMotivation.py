@@ -2,31 +2,31 @@ import time
 
 import torch
 
-from utils.RunningAverage import RunningStats
+from loss.SNDLoss import SNDLoss
 
 
 class SNDMotivationFactory:
     @staticmethod
-    def get_motivation(type, network, lr, eta=1, device='cpu'):
-        if type == 'vanilla':
-            result = SNDVMotivation(network, lr, eta, device)
-        elif type == 'vinv' or type == 'ami':
-            result = SINVMotivation(network, lr, eta, device)
-        elif type == 'tp':
-            result = TPMotivation(network, lr, eta, device)
+    def get_motivation(config, network):
+        if config.type == 'vanilla':
+            result = SNDVMotivation(network, None, config.motivation_lr, config.motivation_scale, config.device)
+        elif config.type == 'vinv' or config.type == 'ami':
+            result = SINVMotivation(network, None, config.motivation_lr, config.motivation_scale, config.device)
+        elif config.type == 'tp':
+            result = TPMotivation(network, None, config.motivation_lr, config.motivation_scale, config.device)
         else:
-            result = SNDMotivation(network, lr, eta, device)
+            result = SNDMotivation(network, SNDLoss(config, network), config.motivation_lr, config.motivation_scale, config.device)
 
         return result
 
 
 class SNDMotivation:
-    def __init__(self, network, lr, eta=1, device='cpu'):
+    def __init__(self, network, loss, lr, distillation_scale=1, device='cpu'):
         self._network = network
+        self._loss = loss
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
-        self._eta = eta
+        self._distillation_scale = distillation_scale
         self._device = device
-        self.reward_stats = RunningStats(1, device)
 
     def train(self, memory, indices):
         if indices:
@@ -38,32 +38,24 @@ class SNDMotivation:
                 next_states = sample.next_state[i].to(self._device)
 
                 self._optimizer.zero_grad()
-                loss = self._network.loss_function(states, next_states)
+                loss = self._loss(states, next_states)
                 loss.backward()
                 self._optimizer.step()
 
             end = time.time()
-            print("CND motivation training time {0:.2f}s".format(end - start))
+            print("SND motivation training time {0:.2f}s".format(end - start))
 
-    def error(self, state0):
-        return self._network.error(state0)
+    @staticmethod
+    def _error(z_state, p_state):
+        distillation_error = (z_state - p_state).pow(2).mean(dim=1, keepdim=True)
 
-    def reward_sample(self, memory, indices):
-        sample = memory.sample(indices)
+        return distillation_error
 
-        states = sample.state.to(self._device)
+    def reward(self, z_state, p_state):
+        distillation_error = self._error(z_state, p_state)
+        reward = distillation_error * self._distillation_scale
 
-        return self.reward(states)
-
-    def reward(self, state0):
-        reward = self.error(state0)
-        return (reward * self._eta).clip(0., 1.)
-
-    def update_state_average(self, state):
-        self._network.update_state_average(state)
-
-    def update_reward_average(self, reward):
-        self.reward_stats.update(reward.to(self._device))
+        return reward.clip(0., 1.), distillation_error
 
 
 class SNDVMotivation(SNDMotivation):
@@ -78,7 +70,7 @@ class SNDVMotivation(SNDMotivation):
                 state_batch = sample_batch.state[i].to(self._device)
 
                 self._optimizer.zero_grad()
-                loss = self._network.loss_function(state_batch, states)
+                loss = self._loss(state_batch, states)
                 loss.backward()
                 self._optimizer.step()
 
@@ -98,7 +90,7 @@ class SINVMotivation(SNDMotivation):
                 actions = sample.action[i].to(self._device)
 
                 self._optimizer.zero_grad()
-                loss = self._network.loss_function(states, next_states, actions)
+                loss = self._loss(states, next_states, actions)
                 loss.backward()
                 self._optimizer.step()
 
@@ -118,7 +110,7 @@ class TPMotivation(SNDMotivation):
                 dones = sample.done[i].to(self._device)
 
                 self._optimizer.zero_grad()
-                loss = self._network.loss_function(states, next_states, dones)
+                loss = self._loss(states, next_states, dones)
                 loss.backward()
                 self._optimizer.step()
 
