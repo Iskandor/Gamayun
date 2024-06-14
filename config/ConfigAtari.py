@@ -2,6 +2,7 @@ import yaml
 
 from agents.atari.PPOAtariA2Agent import PPOAtariA2Agent
 from agents.atari.PPOAtariAgent import PPOAtariAgent
+from agents.atari.PPOAtariDPMAgent import PPOAtariDPMAgent
 from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
 from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
 from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent
@@ -78,12 +79,31 @@ class ConfigMontezumaSNDBaseline(ConfigAtari):
         self.type = 'vicreg'
 
     def train(self, trial):
+        super().train(trial)
+
         trial += self.shift
-        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, 'v1', trial)
-        print(name)
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
 
         agent = PPOAtariSNDAgent(self)
         agent.training_loop(self.env, name, trial)
+
+    def inference(self, trial):
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(name)
+
+        agent = PPOAtariSNDAgent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.inference_loop(self.env, name, trial)
+
+    def analysis(self, task):
+        name = '{0:s}_{1:s}'.format(self.__class__.__name__, self.type)
+        print(name)
+
+        agent = PPOAtariSNDAgent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.analytic_loop(self.env, name, task)
 
 
 class ConfigMontezumaSND2(ConfigAtari):
@@ -235,3 +255,44 @@ class ConfigMontezumaA2(ConfigAtari):
 
         agent = PPOAtariA2Agent(self)
         agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaDPM(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', render_mode=None, steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.motivation_scale = 0.25
+        self.motivation_horizon = 4
+        self.type = 'v1m1h4'
+
+        self.learned_projection_dim = self.feature_dim
+        self.forward_model_dim = self.feature_dim * 8
+
+    def train(self, trial):
+        super().train(trial)
+
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+
+        agent = PPOAtariDPMAgent(self)
+        agent.training_loop(self.env, name, trial)
+
+    def inference(self, trial):
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(name)
+
+        agent = PPOAtariDPMAgent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.inference_loop(self.env, name, trial)
+
+    def analysis(self, task):
+        name = '{0:s}_{1:s}'.format(self.__class__.__name__, self.type)
+        print(name)
+
+        agent = PPOAtariDPMAgent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.analytic_loop(self.env, name, task)

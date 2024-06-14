@@ -14,6 +14,7 @@ class ActivationStage(Enum):
     INFERENCE = 0
     MOTIVATION_INFERENCE = 1
     MOTIVATION_TRAINING = 2
+    TRAJECTORY_UNWIND = 3
 
 
 class DiscreteHead(nn.Module):

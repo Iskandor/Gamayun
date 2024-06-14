@@ -8,15 +8,16 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def atari_env(plots=True, tables=True):
     config = [
-        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'SND-VIC'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'SND-VIC'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'dpm', 'id': 'v1m1h4', 'legend': 'DPM'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3', 'legend': 'seer asym v3'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3delta', 'legend': 'seer asym v3 delta'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v4', 'legend': 'seer asym v4'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m1', 'legend': 'seer v5 model 1'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m2', 'legend': 'seer v5 model 2'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m3', 'legend': 'seer v5 model 3'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4', 'legend': 'seer v5 model 4'},
-        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4f1', 'legend': 'seer v5 model 4 f1'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4', 'legend': 'seer v5 model 4'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4f1', 'legend': 'seer v5 model 4 f1'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4b', 'legend': 'seer v5 model 4M'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a0', 'legend': 'seer v5 model A0'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v5m4a1', 'legend': 'seer v5 model A1'},
@@ -43,7 +44,7 @@ def atari_env(plots=True, tables=True):
     compute_table_values(config, keys=['re'])
     # plot('montezuma_v5m', config, labels=['external reward', 'intrinsic reward', 'forward reward', 'forward space', 'forward target space'], keys=['re', 'ri', 'forward_reward', 'forward_space', 'target_space'], plot_details=['seer_asym_v5m4a2'], window=10000)
     # plot('montezuma_a2', config, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['sym_v1h1', 'sym_v1h2', 'sym_v1h3'], window=10000)
-    plot('montezuma_seer', config, labels=['external reward', 'score', 'forward model loss', 'forward reward'], keys=['re', 'score', 'loss_forward', 'forward_reward'], plot_details=['seer_asym_v5m4f1'], window=10000)
+    plot('montezuma_dpm', config, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['v1m1h4'], window=10000)
 
 
 def procgen_env(plots=True, tables=True):

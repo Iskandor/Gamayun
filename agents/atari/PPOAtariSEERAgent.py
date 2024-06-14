@@ -8,6 +8,7 @@ from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from loss.SEERLoss import SEERLoss, SEERLossV8, SEERLoss_V5M14
+from modules.PPO_Modules import ActivationStage
 from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER_V8, PPOAtariNetworkSEER_V9, PPOAtariNetworkSEER_V5M4, PPOAtariNetworkSEER_V5M13, PPOAtariNetworkSEER_V5M14
 from motivation.SEERMotivation import SEERMotivation
 from utils.StateNorm import ExponentialDecayNorm
@@ -80,7 +81,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
 
     def _step(self, env, trial, state, mode):
         with torch.no_grad():
-            value, action, probs = self.model(state, stage=0)
+            value, action, probs = self.model(state, stage=ActivationStage.INFERENCE)
             next_state, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
             self._check_terminal_states(env, mode, done, next_state)
 
@@ -90,7 +91,7 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             if mode == AgentMode.TRAINING:
                 self.state_average.update(next_state)
 
-            z_state, pz_state, z_next_state, pz_next_state, h_next_state = self.model(state, action, next_state, h_next_state=self.hidden_average.mean(), stage=1)
+            z_state, pz_state, z_next_state, pz_next_state, h_next_state = self.model(state, action, next_state, h_next_state=self.hidden_average.mean(), stage=ActivationStage.MOTIVATION_INFERENCE)
 
             if mode == AgentMode.TRAINING:
                 self.hidden_average.update(h_next_state)

@@ -20,7 +20,7 @@ class PPOAtariNetworkSND(PPOMotivationNetwork):
         self.feature_dim = config.feature_dim
 
         self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
-        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim)
+        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
         self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=sqrt(2))
 
         self.learned_projection = nn.Sequential(
@@ -39,15 +39,15 @@ class PPOAtariNetworkSND(PPOMotivationNetwork):
         return state[:, 0, :, :].unsqueeze(1)
 
     def forward(self, state=None, next_state=None, stage=ActivationStage.INFERENCE):
-        pz_state = self.learned_projection(self.learned_model(self.preprocess(state)))
         zt_state = self.target_model(self.preprocess(state))
+        pzt_state = self.learned_projection(self.learned_model(self.preprocess(state)))
 
         if stage == ActivationStage.INFERENCE:
             value, action, probs = super().forward(self.ppo_encoder(state))
 
-            return value, action, probs, zt_state, pz_state
+            return value, action, probs, zt_state, pzt_state
 
         if stage == ActivationStage.MOTIVATION_TRAINING:
             zt_next_state = self.target_model(self.preprocess(next_state))
-            return zt_state, pz_state, zt_next_state
+            return zt_state, pzt_state, zt_next_state
 

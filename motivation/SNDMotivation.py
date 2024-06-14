@@ -46,13 +46,13 @@ class SNDMotivation:
             print("SND motivation training time {0:.2f}s".format(end - start))
 
     @staticmethod
-    def _error(z_state, p_state):
-        distillation_error = (z_state - p_state).pow(2).mean(dim=1, keepdim=True)
+    def _error(z_state, pz_state):
+        distillation_error = (z_state - pz_state).pow(2).mean(dim=1, keepdim=True)
 
         return distillation_error
 
-    def reward(self, z_state, p_state):
-        distillation_error = self._error(z_state, p_state)
+    def reward(self, z_state, pz_state):
+        distillation_error = self._error(z_state, pz_state)
         reward = distillation_error * self._distillation_scale
 
         return reward.clip(0., 1.), distillation_error
