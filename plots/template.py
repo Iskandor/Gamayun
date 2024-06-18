@@ -50,6 +50,9 @@ class ChartTemplates:
         self.templates[DPM].add_element('loss_prediction', ['val'], 'magenta', 'loss prediction')
         self.templates[DPM].add_element('loss_distillation', ['val'], 'magenta', 'loss distillation')
         self.templates[DPM].add_element('loss_target', ['val'], 'magenta', 'loss target')
+        self.templates[DPM].add_element('distillation_error', ['mean', 'std'], 'red', 'distillation error')
+        self.templates[DPM].add_element('prediction_error', ['mean', 'std'], 'red', 'prediction error')
+
 
         self.templates[A2].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates[A2].add_element('score', ['sum'], 'blue', 'score')

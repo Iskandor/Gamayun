@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
 
-class RepresentationAnalysis:
+class RepresentationAnalysisSEER:
     def __init__(self, representation_file):
         data = np.load(representation_file, allow_pickle=True).item()
 

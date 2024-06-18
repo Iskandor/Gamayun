@@ -1,4 +1,7 @@
+from collections import Counter
+
 import torch
+from tqdm import tqdm
 
 from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
@@ -9,6 +12,7 @@ from loss.DPMLoss import DPMLoss
 from modules.PPO_Modules import ActivationStage
 from modules.atari.PPOAtariNetworkDPM import PPOAtariNetworkDPM
 from motivation.DPMMotivation import DPMMotivation
+import numpy as np
 
 
 class PPOAtariDPMAgent(PPOAtariAgent):
@@ -111,3 +115,82 @@ class PPOAtariDPMAgent(PPOAtariAgent):
                 self.memory.clear()
 
         return next_state, done
+
+    def analytic_loop(self, env, name, task):
+        if task == 'collect_states':
+            states = []
+            actions = []
+            next_states = []
+            room_ids = []
+            state_raw = self._initialize_env(env)
+            state = self._encode_state(state_raw)
+            stop = False
+
+            while not stop:
+                states.append(np.copy(state_raw))
+                next_state, done, next_state_raw, action, info = self._collect_state_step(env, state, AgentMode.INFERENCE)
+                actions.append(action.cpu().numpy())
+                stop = done.item() == 0.
+
+                state = next_state
+                state_raw = next_state_raw
+                next_states.append(np.copy(next_state_raw))
+                room_ids.append(info['room_id'].item())
+
+            print('Explored rooms: ', len(Counter(room_ids).values()))
+
+            np.save('{0:s}_{1:s}{2:s}'.format(name, task, '.npy'),
+                    {
+                        'states': states,
+                        'actions': actions,
+                        'next_states': next_states,
+                        'room_ids': room_ids,
+                    })
+
+        if task == 'collect_representations':
+            data = np.load('{0:s}_{1:s}{2:s}'.format(name, 'collect_states', '.npy'), allow_pickle=True).item()
+            states, actions, next_states, room_ids = data['states'], data['actions'], data['next_states'], data['room_ids']
+            n = len(states)
+
+            zppo_state = []
+            zt_state = []
+            zf_next_state = []
+
+            for state, action, next_state in tqdm(zip(states, actions, next_states), total=n):
+                ppo_features, z_state, z_next_state = self._collect_representation_step(state, action, next_state)
+                zppo_state.append(ppo_features.cpu().numpy())
+                zt_state.append(z_state.cpu().numpy())
+                zf_next_state.append(z_next_state.cpu().numpy())
+
+            np.save('{0:s}_{1:s}{2:s}'.format(name, task, '.npy'),
+                    {
+                        'zppo_state': zppo_state,
+                        'zt_state': zt_state,
+                        'zf_next_state': zf_next_state,
+                        'room_ids': room_ids,
+                    })
+
+        env.close()
+
+    def _collect_state_step(self, env, state, mode):
+        with torch.no_grad():
+            _, action, _, _ = self.model(state)
+            next_state_raw, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
+            self._check_terminal_states(env, mode, done, next_state_raw)
+
+            next_state = self._encode_state(next_state_raw)
+
+        done = torch.tensor(1 - done, dtype=torch.float32)
+
+        return next_state, done, next_state_raw, action, info
+
+    def _collect_representation_step(self, state, action, next_state):
+        state = self._encode_state(state)
+        next_state = self._encode_state(next_state)
+        action = torch.tensor(action, device=self.config.device)
+
+        with torch.no_grad():
+            _, _, _, ppo_features = self.model(state)
+            z_state, pz_state, z_next_state, pz_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
+
+        return ppo_features, z_state, z_next_state

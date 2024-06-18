@@ -1,7 +1,11 @@
-from analytic.RepresentationAnalysis import RepresentationAnalysis
+from analytic.RepresentationAnalysisDPM import RepresentationAnalysisDPM
 
 if __name__ == '__main__':
-    analysis = RepresentationAnalysis('ConfigMontezumaSEER_asym_v5m9_collect_representations.npy')
+    analysis = RepresentationAnalysisDPM('ConfigMontezumaDPMAnalysis_v1m1h4_collect_representations.npy', num_rows=4, verbose=False)
     analysis.umap()
-    analysis.confidence_plot()
+    analysis.eigenvalues()
+    analysis.differential_entropy()
+    analysis.distance_matrix()
+    analysis.save('analysis_ConfigMontezumaDPMAnalysis_v1m1h4.png')
+    # analysis.confidence_plot()
     # analysis.mapper()

@@ -64,7 +64,7 @@ class PPOAtariNetworkDPM(PPOMotivationNetwork):
         init_orthogonal(self.learned_projection[1], gain)
         init_orthogonal(self.learned_projection[3], gain)
 
-        self.forward_model_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
+        self.forward_model_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
         self.forward_model = ForwardModelDPM(config)
 
     @staticmethod
