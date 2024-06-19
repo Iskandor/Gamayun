@@ -28,6 +28,17 @@ class SNDMotivation:
         self._distillation_scale = distillation_scale
         self._device = device
 
+    def loss(self, states, next_states):
+        return self._loss(states, next_states)
+
+    def prepare(self, memory, indices):
+        sample, size = memory.sample_batches(indices)
+
+        states = sample.state
+        next_states = sample.next_state
+
+        return states, next_states
+
     def train(self, memory, indices):
         if indices:
             start = time.time()

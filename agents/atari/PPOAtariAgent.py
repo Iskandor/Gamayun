@@ -15,19 +15,19 @@ class PPOAtariAgent(PPOAgentBase):
     def __init__(self, config):
         super().__init__(config)
         self.model = PPOAtariNetwork(config).to(config.device)
-        # self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.lr)
-        self.algorithm = PPO(self.model,
-                             config.lr,
-                             config.actor_loss_weight,
-                             config.critic_loss_weight,
-                             config.batch_size,
-                             config.trajectory_size,
-                             config.beta,
-                             config.gamma,
-                             ppo_epochs=config.ppo_epochs,
-                             n_env=config.n_env,
-                             device=config.device,
-                             motivation=False)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.lr)
+        self.ppo = PPO(self.model,
+                       config.lr,
+                       config.actor_loss_weight,
+                       config.critic_loss_weight,
+                       config.batch_size,
+                       config.trajectory_size,
+                       config.beta,
+                       config.gamma,
+                       ppo_epochs=config.ppo_epochs,
+                       n_env=config.n_env,
+                       device=config.device,
+                       motivation=False)
 
         self.state_average = PreciseNorm(config.input_shape, config.device)
 
@@ -79,7 +79,7 @@ class PPOAtariAgent(PPOAgentBase):
             indices = self.memory.indices()
 
             if indices is not None:
-                self.algorithm.train(self.memory, indices)
+                self.ppo.train(self.memory, indices)
                 self.memory.clear()
 
         return next_state, done

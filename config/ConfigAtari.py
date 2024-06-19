@@ -70,7 +70,7 @@ class ConfigMontezumaRND(ConfigAtari):
 
 class ConfigMontezumaSNDBaseline(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=8, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
                          path=path)
 
         self.motivation_lr = 1e-4
@@ -94,15 +94,6 @@ class ConfigMontezumaSNDBaseline(ConfigAtari):
         if len(self.path) > 0:
             agent.load(self.path)
         agent.inference_loop(self.env, name, trial)
-
-    def analysis(self, task):
-        name = '{0:s}_{1:s}'.format(self.__class__.__name__, self.type)
-        print(name)
-
-        agent = PPOAtariSNDAgent(self)
-        if len(self.path) > 0:
-            agent.load(self.path)
-        agent.analytic_loop(self.env, name, task)
 
 
 class ConfigMontezumaSND2(ConfigAtari):
@@ -257,14 +248,14 @@ class ConfigMontezumaA2(ConfigAtari):
 
 
 class ConfigMontezumaDPM(ConfigAtari):
-    def __init__(self, num_threads, device, shift, path, steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99]):
+    def __init__(self, num_threads, device, shift, path, steps=8, lr=1e-4, n_env=128, gamma=[0.998, 0.99]):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=steps, lr=lr, n_env=n_env, gamma=gamma, num_threads=num_threads, device=device, shift=shift,
                          path=path)
 
         self.motivation_lr = 1e-4
         self.motivation_scale = 0.25
         self.motivation_horizon = 4
-        self.type = 'v1m1h4'
+        self.type = 'v1m2h4'
 
         self.learned_projection_dim = self.feature_dim
         self.forward_model_dim = self.feature_dim * 8

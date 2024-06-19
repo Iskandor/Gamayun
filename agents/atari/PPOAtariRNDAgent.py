@@ -14,7 +14,7 @@ class PPOAtariRNDAgent(PPOAtariAgent):
         super().__init__(config)
         self.model = PPOAtariNetworkRND(config).to(config.device)
         self.motivation = RNDMotivation(self.model.rnd_model, config.motivation_lr, config.motivation_scale, config.device)
-        self.algorithm = PPO(self.model, config.lr, config.actor_loss_weight, config.critic_loss_weight, config.batch_size, config.trajectory_size,
+        self.ppo = PPO(self.model, config.lr, config.actor_loss_weight, config.critic_loss_weight, config.batch_size, config.trajectory_size,
                              config.beta, config.gamma, ext_adv_scale=2, int_adv_scale=1, ppo_epochs=config.ppo_epochs, n_env=config.n_env,
                              device=config.device, motivation=True)
 
@@ -66,7 +66,7 @@ class PPOAtariRNDAgent(PPOAtariAgent):
                             reward=reward.cpu(),
                             mask=done.cpu())
             indices = self.memory.indices()
-            self.algorithm.train(self.memory, indices)
+            self.ppo.train(self.memory, indices)
             self.motivation.train(self.memory, indices)
 
             if indices is not None:

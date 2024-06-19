@@ -10,6 +10,19 @@ class DPMMotivation:
         self._distillation_scale = distillation_scale
         self._device = device
 
+    @property
+    def loss(self):
+        return self._loss
+
+    def prepare(self, memory, indices):
+        sample, size = memory.sample_batches(indices)
+
+        states = sample.state
+        actions = sample.action
+        next_states = sample.next_state
+
+        return states, actions, next_states
+
     def train(self, memory, indices):
         if indices:
             start = time.time()

@@ -40,6 +40,40 @@ class PPO:
         if self._n_env > 1:
             self._trajectories = [[] for _ in range(self._n_env)]
 
+    def prepare(self, memory, indices):
+        sample = memory.sample(indices, False)
+
+        states = sample.state
+        values = sample.value
+        actions = sample.action
+        probs = sample.prob
+        rewards = sample.reward
+        dones = sample.mask
+
+        if self._motivation:
+            ext_reward = rewards[:, :, 0].unsqueeze(-1)
+            int_reward = rewards[:, :, 1].unsqueeze(-1)
+
+            ext_ref_values, ext_adv_values = self.calc_advantage(values[:, :, 0].unsqueeze(-1), ext_reward, dones, self._gamma[0], self._n_env)
+            int_ref_values, int_adv_values = self.calc_advantage(values[:, :, 1].unsqueeze(-1), int_reward, dones, self._gamma[1], self._n_env)
+            ref_values = torch.cat([ext_ref_values, int_ref_values], dim=2)
+
+            adv_values = ext_adv_values * self.ext_adv_scale + int_adv_values * self.int_adv_scale
+
+        else:
+            ref_values, adv_values = self.calc_advantage(values, rewards, dones, self._gamma[0], self._n_env)
+            adv_values *= self.ext_adv_scale
+
+        permutation = torch.randperm(self._trajectory_size)
+
+        states = states.reshape(-1, *states.shape[2:])[permutation].reshape(-1, self._batch_size, *states.shape[2:])
+        actions = actions.reshape(-1, *actions.shape[2:])[permutation].reshape(-1, self._batch_size, *actions.shape[2:])
+        probs = probs.reshape(-1, *probs.shape[2:])[permutation].reshape(-1, self._batch_size, *probs.shape[2:])
+        adv_values = adv_values.reshape(-1, *adv_values.shape[2:])[permutation].reshape(-1, self._batch_size, *adv_values.shape[2:])
+        ref_values = ref_values.reshape(-1, *ref_values.shape[2:])[permutation].reshape(-1, self._batch_size, *ref_values.shape[2:])
+
+        return states, actions, probs, adv_values, ref_values
+
     def train(self, memory, indices):
         if indices:
             start = time.time()

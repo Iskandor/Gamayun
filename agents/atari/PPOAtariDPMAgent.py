@@ -1,3 +1,4 @@
+import time
 from collections import Counter
 
 import torch
@@ -24,20 +25,22 @@ class PPOAtariDPMAgent(PPOAtariAgent):
                                         config.motivation_lr,
                                         config.motivation_scale,
                                         config.device)
-        self.algorithm = PPO(self.model,
-                             config.lr,
-                             config.actor_loss_weight,
-                             config.critic_loss_weight,
-                             config.batch_size,
-                             config.trajectory_size,
-                             config.beta,
-                             config.gamma,
-                             ext_adv_scale=2,
-                             int_adv_scale=1,
-                             ppo_epochs=config.ppo_epochs,
-                             n_env=config.n_env,
-                             device=config.device,
-                             motivation=True)
+        self.ppo = PPO(self.model,
+                       config.lr,
+                       config.actor_loss_weight,
+                       config.critic_loss_weight,
+                       config.batch_size,
+                       config.trajectory_size,
+                       config.beta,
+                       config.gamma,
+                       ext_adv_scale=2,
+                       int_adv_scale=1,
+                       ppo_epochs=config.ppo_epochs,
+                       n_env=config.n_env,
+                       device=config.device,
+                       motivation=True)
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.lr)
 
     def _initialize_info(self, trial):
         info_points = [
@@ -110,8 +113,7 @@ class PPOAtariDPMAgent(PPOAtariAgent):
             indices = self.memory.indices()
 
             if indices is not None:
-                self.algorithm.train(self.memory, indices)
-                self.motivation.train(self.memory, indices)
+                self._train(self.memory, indices)
                 self.memory.clear()
 
         return next_state, done
@@ -194,3 +196,34 @@ class PPOAtariDPMAgent(PPOAtariAgent):
             z_state, pz_state, z_next_state, pz_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
 
         return ppo_features, z_state, z_next_state
+
+    def _train(self, memory, indices):
+        start = time.time()
+        states, actions, probs, adv_values, ref_values = self.ppo.prepare(memory, indices)
+        motivation_states, motivation_actions, motivation_next_states = self.motivation.prepare(memory, indices)
+
+        n = self.config.trajectory_size // self.config.batch_size
+
+        for epoch in range(self.config.ppo_epochs):
+            for i in range(n):
+                new_values, new_probs = self.model.ppo_eval(states[i].to(self.config.device))
+                self.optimizer.zero_grad()
+                loss = self.ppo.loss(
+                    new_values,
+                    new_probs,
+                    ref_values[i].to(self.config.device),
+                    adv_values[i].to(self.config.device),
+                    actions[i].to(self.config.device),
+                    probs[i].to(self.config.device))
+
+                if epoch == self.config.ppo_epochs - 1:
+                    loss += self.motivation.loss(motivation_states[i].to(self.config.device),
+                                                 motivation_actions[i].to(self.config.device),
+                                                 motivation_next_states[i].to(self.config.device))
+
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
+                self.optimizer.step()
+
+        end = time.time()
+        print("DPM agent training: trajectory {0:d} batch size {1:d} epochs {2:d} training time {3:.2f}s".format(self.config.trajectory_size, self.config.batch_size, self.config.ppo_epochs, end - start))

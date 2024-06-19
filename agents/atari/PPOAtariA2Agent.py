@@ -20,7 +20,7 @@ class PPOAtariA2Agent(PPOAtariAgent):
                                        config.motivation_scale,
                                        config.device)
 
-        self.algorithm = PPO(self.model,
+        self.ppo = PPO(self.model,
                              config.lr,
                              config.actor_loss_weight,
                              config.critic_loss_weight,
@@ -97,7 +97,7 @@ class PPOAtariA2Agent(PPOAtariAgent):
             indices = self.memory.indices()
 
             if indices is not None:
-                self.algorithm.train(self.memory, indices)
+                self.ppo.train(self.memory, indices)
                 self.motivation.train(self.memory, indices)
                 self.memory.clear()
 
