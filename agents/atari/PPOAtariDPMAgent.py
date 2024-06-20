@@ -77,6 +77,9 @@ class PPOAtariDPMAgent(PPOAtariAgent):
             next_state, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
             self._check_terminal_states(env, mode, done, next_state)
             next_state = self._encode_state(next_state)
+            next_state = self.state_average.process(next_state).clip_(-4., 4.)
+            if mode == AgentMode.TRAINING:
+                self.state_average.update(next_state)
 
             z_state, pz_state, z_next_state, pz_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
             int_reward, distillation_error, prediction_error = self.motivation.reward(z_state, pz_state, z_next_state, pz_next_state)
@@ -117,6 +120,19 @@ class PPOAtariDPMAgent(PPOAtariAgent):
                 self.memory.clear()
 
         return next_state, done
+
+    def save(self, path):
+        state = {
+            'model_state': self.model.state_dict(),
+            'state_average': self.state_average.get_state(),
+        }
+        torch.save(state, path + '.pth')
+
+    def load(self, path):
+        state = torch.load(path + '.pth', map_location='cpu')
+
+        self.model.load_state_dict(state['model_state'])
+        self.state_average.set_state(state['state_average'])
 
     def analytic_loop(self, env, name, task):
         if task == 'collect_states':
