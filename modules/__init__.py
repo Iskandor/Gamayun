@@ -5,6 +5,36 @@ import torch
 import torch.nn as nn
 
 
+class ResConvBlock(torch.nn.Module):
+    def __init__(self, in_ch, out_ch, stride, gain):
+        super(ResConvBlock, self).__init__()
+
+        self.conv0 = torch.nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=stride, padding=1)
+        self.act0 = torch.nn.SiLU()
+        self.conv1 = torch.nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1)
+        self.act1 = torch.nn.SiLU()
+
+        torch.nn.init.orthogonal_(self.conv0.weight, gain)
+        torch.nn.init.zeros_(self.conv0.bias)
+        torch.nn.init.orthogonal_(self.conv1.weight, gain)
+        torch.nn.init.zeros_(self.conv1.bias)
+
+        # bypass conv, learnable skip connection
+        self.conv_bp = torch.nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=stride, padding=0)
+
+        torch.nn.init.orthogonal_(self.conv_bp.weight, gain)
+        torch.nn.init.zeros_(self.conv_bp.bias)
+
+    def forward(self, x):
+        y = self.conv0(x)
+        y = self.act0(y)
+        y = self.conv1(y)
+
+        y = self.act1(y + self.conv_bp(x))
+
+        return y
+
+
 class ResMLPBlock(nn.Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True, gain: float = sqrt(2)):
         super(ResMLPBlock, self).__init__()

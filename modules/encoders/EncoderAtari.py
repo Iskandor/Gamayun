@@ -11,7 +11,7 @@ from torchvision import transforms
 from torchvision.transforms.functional import to_pil_image
 
 from analytic.ResultCollector import ResultCollector
-from modules import init_orthogonal, init_xavier_uniform
+from modules import init_orthogonal, init_xavier_uniform, ResConvBlock
 from utils.Augmentation import aug_random_apply, aug_pixelate, aug_mask_tiles, aug_noise
 
 
@@ -137,45 +137,6 @@ class AtariStateEncoderLarge(nn.Module):
         return out
 
 
-class ResidualBlock(nn.Module):
-    def __init__(self, inplanes: int, planes: int, gain=sqrt(2)):
-        super().__init__()
-        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-
-        self.downsample = None
-        if inplanes != planes:
-            self.downsample = nn.Sequential(
-                nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False),
-                nn.BatchNorm2d(planes),
-            )
-
-        init_orthogonal(self.conv1, gain)
-        init_orthogonal(self.conv2, gain)
-
-    def forward(self, x):
-        if self.downsample is not None:
-            identity = self.downsample(x)
-        else:
-            identity = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-
-        out += identity
-        out = self.relu(out)
-
-        return out
-
-
 class AtariStateEncoderResNet(nn.Module):
 
     def __init__(self, input_shape, feature_dim, gain=sqrt(2)):
@@ -187,21 +148,24 @@ class AtariStateEncoderResNet(nn.Module):
         self.input_height = input_shape[1]
         self.input_width = input_shape[2]
 
-        self.final_conv_size = 64 * (self.input_width // 4) * (self.input_height // 4)  # 36864
+        self.final_conv_size = 64 * (self.input_width // 8) * (self.input_height // 8)
 
         self.main = nn.Sequential(
-            nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
-            ResidualBlock(32, 64, gain=gain),
-            ResidualBlock(64, 64, gain=gain),
-            nn.Flatten(),
-            nn.Linear(self.final_conv_size, feature_dim)
+            torch.nn.Conv2d(input_shape[0], 32, kernel_size=3, stride=2, padding=1),
+            torch.nn.SiLU(),
+            torch.nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            torch.nn.SiLU(),
+
+            ResConvBlock(64, 64, 2, gain),
+            ResConvBlock(64, 64, 1, gain),
+
+            torch.nn.Flatten(),
+            torch.nn.Linear(self.final_conv_size, self.feature_size)
         )
 
         # gain = nn.init.calculate_gain('relu')
         init_orthogonal(self.main[0], gain)
+        init_orthogonal(self.main[2], gain)
 
     def forward(self, inputs):
         out = self.main(inputs)
