@@ -93,7 +93,7 @@ class AtariStateEncoderUniversal(nn.Module):
 
 class AtariStateEncoderLarge(nn.Module):
 
-    def __init__(self, input_shape, feature_dim, gain=0.5):
+    def __init__(self, input_shape, feature_dim, activation=nn.GELU, gain=0.5):
         super().__init__()
         self.feature_size = feature_dim
         self.hidden_size = self.feature_size
@@ -105,13 +105,13 @@ class AtariStateEncoderLarge(nn.Module):
         self.final_conv_size = 128 * (self.input_width // 8) * (self.input_height // 8)
         self.main = nn.Sequential(
             nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1),
-            nn.GELU(),
+            activation(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-            nn.GELU(),
+            activation(),
             nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
-            nn.GELU(),
+            activation(),
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.GELU(),
+            activation(),
             nn.Flatten(),
             nn.Linear(self.final_conv_size, self.feature_size),
         )

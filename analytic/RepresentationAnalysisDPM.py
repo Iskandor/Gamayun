@@ -32,7 +32,7 @@ class RepresentationAnalysisDPM:
         self.num_rows = num_rows
         self.num_cols = 3
         self.index = 1
-        plt.figure(figsize=(self.num_cols * 5.00, self.num_rows * 5.00))
+        self.figure = plt.figure(figsize=(self.num_cols * 5.00, self.num_rows * 5.00))
 
         data = np.load(representation_file, allow_pickle=True).item()
 
@@ -65,7 +65,8 @@ class RepresentationAnalysisDPM:
             ax.title.set_text(representation.label)
 
             embeding = reducer.fit_transform(representation.data)
-            ax.scatter(embeding[:, 0], embeding[:, 1], c=color_data, s=3, alpha=1.0)
+            scatter = ax.scatter(embeding[:, 0], embeding[:, 1], c=self.room_ids, s=3, alpha=1.0, cmap=plt.cm.get_cmap('RdYlBu'))
+            plt.colorbar(scatter, ax=ax)
 
             self.index += 1
 
@@ -125,8 +126,13 @@ class RepresentationAnalysisDPM:
             ax.grid(visible=True)
             ax.title.set_text(representation.label)
 
+            axx = ax.inset_axes([-0.05, -0.25, 1.1, 0.2], )
+            axx.plot(range(self.room_ids.shape[0]), self.room_ids, color='blue')
+            axx.set_xticks([])
+
             dist_matrix = scipy.spatial.distance_matrix(representation.data, representation.data)
             seaborn.heatmap(dist_matrix, cmap='coolwarm')
+            ax.set_xticks([])
 
             self.index += 1
 

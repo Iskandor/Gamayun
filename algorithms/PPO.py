@@ -17,6 +17,7 @@ class MODE(Enum):
 class PPO:
     def __init__(self, network, lr, actor_loss_weight, critic_loss_weight, batch_size, trajectory_size, p_beta, p_gamma,
                  ppo_epochs=10, p_epsilon=0.1, p_lambda=0.95, ext_adv_scale=1, int_adv_scale=1, device='cpu', n_env=1, motivation=False):
+
         self._network = network
         self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
         self._beta = p_beta
@@ -37,8 +38,11 @@ class PPO:
         self.ext_adv_scale = ext_adv_scale
         self.int_adv_scale = int_adv_scale
 
-        if self._n_env > 1:
-            self._trajectories = [[] for _ in range(self._n_env)]
+        self._states = None
+        self._actions = None
+        self._probs = None
+        self._adv_values = None
+        self._ref_values = None
 
     def prepare(self, memory, indices):
         sample = memory.sample(indices, False)
@@ -64,13 +68,20 @@ class PPO:
             ref_values, adv_values = self.calc_advantage(values, rewards, dones, self._gamma[0], self._n_env)
             adv_values *= self.ext_adv_scale
 
+        self._states = states
+        self._actions = actions
+        self._probs = probs
+        self._adv_values = adv_values
+        self._ref_values = ref_values
+
+    def batches(self, batch_size):
         permutation = torch.randperm(self._trajectory_size)
 
-        states = states.reshape(-1, *states.shape[2:])[permutation].reshape(-1, self._batch_size, *states.shape[2:])
-        actions = actions.reshape(-1, *actions.shape[2:])[permutation].reshape(-1, self._batch_size, *actions.shape[2:])
-        probs = probs.reshape(-1, *probs.shape[2:])[permutation].reshape(-1, self._batch_size, *probs.shape[2:])
-        adv_values = adv_values.reshape(-1, *adv_values.shape[2:])[permutation].reshape(-1, self._batch_size, *adv_values.shape[2:])
-        ref_values = ref_values.reshape(-1, *ref_values.shape[2:])[permutation].reshape(-1, self._batch_size, *ref_values.shape[2:])
+        states = self._states.reshape(-1, *self._states.shape[2:])[permutation].reshape(-1, batch_size, *self._states.shape[2:])
+        actions = self._actions.reshape(-1, *self._actions.shape[2:])[permutation].reshape(-1, batch_size, *self._actions.shape[2:])
+        probs = self._probs.reshape(-1, *self._probs.shape[2:])[permutation].reshape(-1, batch_size, *self._probs.shape[2:])
+        adv_values = self._adv_values.reshape(-1, *self._adv_values.shape[2:])[permutation].reshape(-1, batch_size, *self._adv_values.shape[2:])
+        ref_values = self._ref_values.reshape(-1, *self._ref_values.shape[2:])[permutation].reshape(-1, batch_size, *self._ref_values.shape[2:])
 
         return states, actions, probs, adv_values, ref_values
 

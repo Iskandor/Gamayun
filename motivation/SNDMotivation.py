@@ -28,14 +28,23 @@ class SNDMotivation:
         self._distillation_scale = distillation_scale
         self._device = device
 
+        self._states = None
+        self._next_states = None
+
     def loss(self, states, next_states):
         return self._loss(states, next_states)
 
     def prepare(self, memory, indices):
-        sample, size = memory.sample_batches(indices)
+        sample = memory.sample(indices)
 
-        states = sample.state
-        next_states = sample.next_state
+        self._states = sample.state
+        self._next_states = sample.next_state
+
+    def batches(self, batch_size):
+        permutation = torch.randperm(self._states.shape[0])
+
+        states = self._states[permutation].reshape(-1, batch_size, *self._states.shape[1:])
+        next_states = self._next_states[permutation].reshape(-1, batch_size, *self._next_states.shape[1:])
 
         return states, next_states
 

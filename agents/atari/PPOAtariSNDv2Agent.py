@@ -7,14 +7,14 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from modules.atari.PPOAtariNetworkSND import PPOAtariNetworkSND
+from modules.atari.PPOAtariNetworkSNDv2 import PPOAtariNetworkSNDv2
 from motivation.SNDMotivation import SNDMotivationFactory
 
 
-class PPOAtariSNDAgent(PPOAtariAgent):
+class PPOAtariSNDv2Agent(PPOAtariAgent):
     def __init__(self, config):
         super().__init__(config)
-        self.model = PPOAtariNetworkSND(config).to(config.device)
+        self.model = PPOAtariNetworkSNDv2(config).to(config.device)
         self.motivation = SNDMotivationFactory.get_motivation(config,
                                                               self.model
                                                               )
@@ -56,6 +56,9 @@ class PPOAtariSNDAgent(PPOAtariAgent):
         return analysis
 
     def _step(self, env, trial, state, mode):
+        state = self.state_average.process(state).clip_(-4., 4.)
+        self.state_average.update(state)
+
         with torch.no_grad():
             value, action, probs, z_state, pz_state = self.model(state)
             int_reward, distillation_error = self.motivation.reward(z_state, pz_state)
@@ -129,3 +132,16 @@ class PPOAtariSNDAgent(PPOAtariAgent):
 
         end = time.time()
         print("SND agent training: trajectory {0:d} batch size {1:d} epochs {2:d} training time {3:.2f}s".format(self.config.trajectory_size, self.config.batch_size, self.config.ppo_epochs, end - start))
+
+    def save(self, path):
+        state = {
+            'model_state': self.model.state_dict(),
+            'state_average': self.state_average.get_state(),
+        }
+        torch.save(state, path + '.pth')
+
+    def load(self, path):
+        state = torch.load(path + '.pth', map_location='cpu')
+
+        self.model.load_state_dict(state['model_state'])
+        self.state_average.set_state(state['state_average'])

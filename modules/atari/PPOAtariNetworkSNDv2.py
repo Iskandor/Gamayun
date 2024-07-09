@@ -6,9 +6,9 @@ from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
 from modules.encoders.EncoderAtari import AtariStateEncoderLarge
 
 
-class PPOAtariNetworkSND(PPOMotivationNetwork):
+class PPOAtariNetworkSNDv2(PPOMotivationNetwork):
     def __init__(self, config):
-        super(PPOAtariNetworkSND, self).__init__(config)
+        super(PPOAtariNetworkSNDv2, self).__init__(config, activation=nn.SiLU)
 
         input_channels = 1
         input_height = config.input_shape[1]
@@ -19,18 +19,18 @@ class PPOAtariNetworkSND(PPOMotivationNetwork):
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
 
-        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, activation=nn.GELU, gain=sqrt(2))
-        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, activation=nn.GELU, gain=0.5)
-        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, activation=nn.GELU, gain=sqrt(2))
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, activation=nn.SiLU, gain=0.5)
+        self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, activation=nn.SiLU, gain=0.5)
+        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, activation=nn.SiLU, gain=0.5)
 
         self.learned_projection = nn.Sequential(
-            nn.GELU(),
+            nn.SiLU(),
             nn.Linear(self.feature_dim, self.feature_dim),
-            nn.GELU(),
+            nn.SiLU(),
             nn.Linear(self.feature_dim, self.feature_dim)
         )
 
-        gain = sqrt(2)
+        gain = 0.5
         init_orthogonal(self.learned_projection[1], gain)
         init_orthogonal(self.learned_projection[3], gain)
 

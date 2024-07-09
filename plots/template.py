@@ -25,12 +25,14 @@ class ChartTemplates:
         A2 = 'a2'
         DPM = 'dpm'
         SND = 'snd'
+        SNDV2 = 'sndv2'
         SEER = 'seer'
 
         self.templates = {
             A2: Template(),
             DPM: Template(),
             SND: Template(),
+            SNDV2: Template(),
             SEER: Template(),
         }
 
@@ -40,6 +42,13 @@ class ChartTemplates:
         self.templates[SND].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
         self.templates[SND].add_element('loss_prediction', ['val'], 'magenta', 'loss prediction')
         self.templates[SND].add_element('loss_target', ['val'], 'magenta', 'loss target')
+
+        self.templates[SNDV2].add_element('re', ['sum'], 'blue', 'external reward')
+        self.templates[SNDV2].add_element('score', ['sum'], 'blue', 'score')
+        self.templates[SNDV2].add_element('ri', ['mean', 'std'], 'red', 'intrinsic reward')
+        self.templates[SNDV2].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
+        self.templates[SNDV2].add_element('loss_prediction', ['val'], 'magenta', 'loss prediction')
+        self.templates[SNDV2].add_element('loss_target', ['val'], 'magenta', 'loss target')
 
         self.templates[DPM].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates[DPM].add_element('score', ['sum'], 'blue', 'score')
@@ -52,7 +61,6 @@ class ChartTemplates:
         self.templates[DPM].add_element('loss_target', ['val'], 'magenta', 'loss target')
         self.templates[DPM].add_element('distillation_error', ['mean', 'std'], 'red', 'distillation error')
         self.templates[DPM].add_element('prediction_error', ['mean', 'std'], 'red', 'prediction error')
-
 
         self.templates[A2].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates[A2].add_element('score', ['sum'], 'blue', 'score')
