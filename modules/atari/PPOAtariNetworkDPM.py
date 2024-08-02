@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from math import sqrt
 
-from modules import init_orthogonal
+from modules import init_orthogonal, ResMLPBlock
 from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
 from modules.encoders.EncoderAtari import AtariStateEncoderLarge
 
@@ -15,23 +15,31 @@ class ForwardModelDPM(nn.Module):
         self.feature_dim = config.feature_dim
         self.forward_model_dim = config.forward_model_dim
 
+        # self.forward_model = nn.Sequential(
+        #     nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
+        #     nn.GELU(),
+        #     nn.Linear(self.forward_model_dim + self.action_dim, self.forward_model_dim),
+        #     nn.GELU(),
+        #     nn.Linear(self.forward_model_dim + self.action_dim, self.feature_dim),
+        # )
+
         self.forward_model = nn.Sequential(
             nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
             nn.GELU(),
-            nn.Linear(self.forward_model_dim + self.action_dim, self.forward_model_dim),
+            ResMLPBlock(self.forward_model_dim, self.forward_model_dim),
             nn.GELU(),
-            nn.Linear(self.forward_model_dim + self.action_dim, self.feature_dim),
+            ResMLPBlock(self.forward_model_dim, self.feature_dim),
         )
 
         gain = sqrt(2)
         init_orthogonal(self.forward_model[0], gain)
-        init_orthogonal(self.forward_model[2], gain)
-        init_orthogonal(self.forward_model[4], gain)
+        # init_orthogonal(self.forward_model[2], gain)
+        # init_orthogonal(self.forward_model[4], gain)
 
     def forward(self, z_state, action):
         y = self.forward_model[0](torch.cat([z_state, action], dim=1))
-        y = self.forward_model[2](torch.cat([y, action], dim=1))
-        y = self.forward_model[4](torch.cat([y, action], dim=1))
+        y = self.forward_model[2](torch.cat([y], dim=1))
+        y = self.forward_model[4](torch.cat([y], dim=1))
 
         return y
 

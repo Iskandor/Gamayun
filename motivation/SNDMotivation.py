@@ -31,8 +31,9 @@ class SNDMotivation:
         self._states = None
         self._next_states = None
 
-    def loss(self, states, next_states):
-        return self._loss(states, next_states)
+    @property
+    def loss(self):
+        return self._loss
 
     def prepare(self, memory, indices):
         sample = memory.sample(indices)

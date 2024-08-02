@@ -42,25 +42,17 @@ class ResMLPBlock(nn.Module):
         self.block = nn.Sequential(
             nn.Linear(in_features, out_features, bias),
             nn.GELU(),
-            nn.Linear(out_features, out_features, bias)
+            nn.Linear(out_features, out_features, bias),
         )
 
         init_orthogonal(self.block[0], gain)
         init_orthogonal(self.block[2], gain)
 
-        if in_features != out_features:
-            self.downsample = nn.Linear(in_features, out_features, bias)
-            init_orthogonal(self.downsample, gain)
-        else:
-            self.downsample = None
+        self.skip = nn.Linear(in_features, out_features, bias)
+        init_orthogonal(self.skip, gain)
 
     def forward(self, x):
-        if self.downsample is not None:
-            identity = self.downsample(x)
-        else:
-            identity = x
-
-        y = identity + self.block(x)
+        y = self.skip(x) + self.block(x)
         return y
 
 

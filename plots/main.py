@@ -11,6 +11,7 @@ def atari_env(plots=True, tables=True):
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'snd', 'id': 'std', 'legend': 'SND-VIC'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'dpm', 'id': 'v1m1h4', 'legend': 'DPM v1m1h4'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'dpm', 'id': 'v1m2h4', 'legend': 'DPM v1m2h4'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'dpm', 'id': 'v1m3h4', 'legend': 'DPM v1m3h4'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3', 'legend': 'seer asym v3'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v3delta', 'legend': 'seer asym v3 delta'},
         # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'seer', 'id': 'seer_asym_v4', 'legend': 'seer asym v4'},
@@ -48,13 +49,16 @@ def atari_env(plots=True, tables=True):
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'sndv2', 'id': 'sndv2_m2', 'legend': 'SNDv2 m2'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'sndv2', 'id': 'sndv2_m3', 'legend': 'SNDv2 m3'},
         {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'sndv2', 'id': 'sndv2_m4', 'legend': 'SNDv2 m4'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'sndv2', 'id': 'sndv2_v2m1', 'legend': 'SNDv2 v2m1'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'sndv2', 'id': 'sndv2_v3m1', 'legend': 'SNDv2 v3m1'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'sndv2', 'id': 'sndv2_v3m2', 'legend': 'SNDv2 v3m2'},
     ]
 
     # compute_table_values(config_sndv2, keys=['re'])
     # plot('montezuma_v5m', config, labels=['external reward', 'intrinsic reward', 'forward reward', 'forward space', 'forward target space'], keys=['re', 'ri', 'forward_reward', 'forward_space', 'target_space'], plot_details=['seer_asym_v5m4a2'], window=10000)
     # plot('montezuma_a2', config, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['sym_v1h1', 'sym_v1h2', 'sym_v1h3'], window=10000)
-    # plot('montezuma_dpm', config_dpm, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['v1m2h4'], window=10000)
-    plot('montezuma_sndv2', config_sndv2, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=[], window=10000)
+    # plot('montezuma_dpm', config_dpm, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['v1m3h4'], window=10000)
+    plot('montezuma_sndv2', config_sndv2, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['sndv2_v3m2'], window=10000)
 
 
 def procgen_env(plots=True, tables=True):

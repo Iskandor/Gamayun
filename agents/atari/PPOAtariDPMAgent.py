@@ -215,16 +215,19 @@ class PPOAtariDPMAgent(PPOAtariAgent):
 
     def _train(self, memory, indices):
         start = time.time()
-        states, actions, probs, adv_values, ref_values = self.ppo.prepare(memory, indices)
-        motivation_states, motivation_actions, motivation_next_states = self.motivation.prepare(memory, indices)
 
         n = self.config.trajectory_size // self.config.batch_size
+        self.ppo.prepare(memory, indices)
+        self.motivation.prepare(memory, indices)
+        im_batch_size = self.config.batch_size // self.config.ppo_epochs
+        im_states, im_actions, im_next_states = self.motivation.batches(im_batch_size)
 
-        for epoch in range(self.config.ppo_epochs):
+        for epochs in range(self.config.ppo_epochs):
+            states, actions, probs, adv_values, ref_values = self.ppo.batches(self.config.batch_size)
             for i in range(n):
                 new_values, new_probs = self.model.ppo_eval(states[i].to(self.config.device))
                 self.optimizer.zero_grad()
-                loss = self.ppo.loss(
+                ppo_loss = self.ppo.loss(
                     new_values,
                     new_probs,
                     ref_values[i].to(self.config.device),
@@ -232,10 +235,13 @@ class PPOAtariDPMAgent(PPOAtariAgent):
                     actions[i].to(self.config.device),
                     probs[i].to(self.config.device))
 
-                if epoch == self.config.ppo_epochs - 1:
-                    loss += self.motivation.loss(motivation_states[i].to(self.config.device),
-                                                 motivation_actions[i].to(self.config.device),
-                                                 motivation_next_states[i].to(self.config.device))
+                im_loss = self.motivation.loss(
+                    im_states[i + epochs * n].to(self.config.device),
+                    im_actions[i + epochs * n].to(self.config.device),
+                    im_next_states[i + epochs * n].to(self.config.device),
+                )
+
+                loss = ppo_loss + im_loss
 
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)

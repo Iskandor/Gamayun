@@ -10,16 +10,27 @@ class DPMMotivation:
         self._distillation_scale = distillation_scale
         self._device = device
 
+        self._states = None
+        self._actions = None
+        self._next_states = None
+
     @property
     def loss(self):
         return self._loss
 
     def prepare(self, memory, indices):
-        sample, size = memory.sample_batches(indices)
+        sample = memory.sample(indices)
 
-        states = sample.state
-        actions = sample.action
-        next_states = sample.next_state
+        self._states = sample.state
+        self._actions = sample.action
+        self._next_states = sample.next_state
+
+    def batches(self, batch_size):
+        permutation = torch.randperm(self._states.shape[0])
+
+        states = self._states[permutation].reshape(-1, batch_size, *self._states.shape[1:])
+        actions = self._actions[permutation].reshape(-1, batch_size, *self._actions.shape[1:])
+        next_states = self._next_states[permutation].reshape(-1, batch_size, *self._next_states.shape[1:])
 
         return states, actions, next_states
 

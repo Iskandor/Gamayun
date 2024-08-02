@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -21,16 +22,19 @@ class DPMLoss(nn.Module):
         loss_target = self.vicreg_loss(zt_state, zt_next_state)
         loss_distillation = self._distillation_loss(pzt_state, zt_state.detach())
         loss_prediction = self._prediction_loss(pzf_next_state, zf_next_state.detach())
+        loss_prediction_t0 = torch.clone(loss_prediction)
 
         for t in range(1, self.horizon):
             pzf_next_state = self.model(None, actions[t:], next_states[t:], pzf_next_state[:-1], stage=ActivationStage.TRAJECTORY_UNWIND)
             loss_prediction += self._prediction_loss(pzf_next_state, zf_next_state[t:].detach())
 
+        loss_prediction_tH = torch.clone(loss_prediction)
+
         ResultCollector().update(loss_target=loss_target.unsqueeze(-1).detach().cpu(),
                                  loss_distillation=loss_distillation.unsqueeze(-1).detach().cpu(),
-                                 loss_prediction=loss_prediction.unsqueeze(-1).detach().cpu(),
+                                 loss_prediction_t0=loss_prediction_t0.unsqueeze(-1).detach().cpu(),
+                                 loss_prediction_tH=loss_prediction_tH.unsqueeze(-1).detach().cpu(),
                                  )
-
         return loss_target + loss_distillation + loss_prediction
 
     @staticmethod
