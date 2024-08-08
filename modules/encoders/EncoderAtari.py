@@ -121,7 +121,7 @@ class AtariStateEncoderLarge(nn.Module):
         init_orthogonal(self.main[2], gain)
         init_orthogonal(self.main[4], gain)
         init_orthogonal(self.main[6], gain)
-        init_orthogonal(self.main[9], gain)
+        init_orthogonal(self.main[9], 0.01)
 
         self.local_layer_depth = self.main[4].out_channels
 
