@@ -9,6 +9,7 @@ from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent
 from agents.atari.PPOAtariSNDAgent import PPOAtariSNDAgent
 from agents.atari.PPOAtariSNDv2Agent import PPOAtariSNDv2Agent
 from agents.atari.PPOAtariSNDv3Agent import PPOAtariSNDv3Agent
+from agents.atari.PPOAtariSNDv4Agent import PPOAtariSNDv4Agent
 from config.ConfigBase import ConfigPPO
 from utils.AtariWrapper import WrapperHardAtari
 from utils.MultiEnvWrapper import MultiEnvParallel
@@ -149,6 +150,34 @@ class ConfigMontezumaSNDv3(ConfigAtari):
         print(name)
 
         agent = PPOAtariSNDv3Agent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.inference_loop(self.env, name, trial)
+
+
+class ConfigMontezumaSNDv4(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=8, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+
+        self.motivation_lr = 1e-4
+        self.motivation_scale = 0.25
+        self.type = 'v1m1'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(name)
+
+        agent = PPOAtariSNDv4Agent(self)
+        if len(self.path) > 0:
+            agent.load(self.path)
+        agent.training_loop(self.env, name, trial)
+
+    def inference(self, trial):
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(name)
+
+        agent = PPOAtariSNDv4Agent(self)
         if len(self.path) > 0:
             agent.load(self.path)
         agent.inference_loop(self.env, name, trial)
