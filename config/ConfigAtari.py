@@ -278,8 +278,8 @@ class ConfigMontezumaDPM(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.motivation_scale = 0.25
-        self.motivation_horizon = 4
-        self.type = 'v1m3h4'
+        self.motivation_horizon = 16
+        self.type = 'v3m2h16'
 
         self.learned_projection_dim = self.feature_dim
         self.forward_model_dim = self.feature_dim * 4
