@@ -95,15 +95,22 @@ class RunningStats:
         self.std = ((self.var / self.count) ** 0.5) + self.eps
 
     def reset(self, i):
-        if self.n > 1:
-            self.max[i].fill_(0)
-            self.sum[i].fill_(0)
-            self.mean[i].fill_(0)
-            self.var[i].fill_(0.01)
-            self.count[i] = 1
-        else:
-            self.max.fill_(0)
-            self.sum.fill_(0)
-            self.mean.fill_(0)
-            self.var.fill_(0.01)
-            self.count = 1
+        self.max[i].fill_(0)
+        self.sum[i].fill_(0)
+        self.mean[i].fill_(0)
+        self.var[i].fill_(0.01)
+        self.count[i] = 1
+
+    # def reset(self, i):
+    #     if self.n > 1:
+    #         self.max[i].fill_(0)
+    #         self.sum[i].fill_(0)
+    #         self.mean[i].fill_(0)
+    #         self.var[i].fill_(0.01)
+    #         self.count[i] = 1
+    #     else:
+    #         self.max.fill_(0)
+    #         self.sum.fill_(0)
+    #         self.mean.fill_(0)
+    #         self.var.fill_(0.01)
+    #         self.count = 1

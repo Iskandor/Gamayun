@@ -1,7 +1,8 @@
 --find-links https://download.pytorch.org/whl/torch_stable.html
 box2d-py
 etaprogress~=1.1.1
-gym[atari, accept-rom-license]==0.26.2
+gymnasium[atari, accept-rom-license]
+crafter
 imageio~=2.16.1
 matplotlib~=3.5.1
 nes-py

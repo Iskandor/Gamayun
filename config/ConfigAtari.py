@@ -18,7 +18,7 @@ from utils.WrapperMontezuma import WrapperMontezuma
 
 class ConfigAtari(ConfigPPO):
     def __init__(self, env_name, steps, lr, n_env, gamma, num_threads, device, shift, path):
-        super().__init__(steps=steps, lr=lr, n_env=n_env, gamma=gamma, device=device)
+        super().__init__(path='ppo_atari.yaml', steps=steps, lr=lr, n_env=n_env, gamma=gamma, device=device)
 
         self.num_threads = num_threads
         self.shift = shift

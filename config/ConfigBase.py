@@ -35,8 +35,8 @@ class Config:
 
 
 class ConfigPPO(Config):
-    def __init__(self, steps, lr, n_env, gamma, device='cpu'):
-        super().__init__(Path.cwd() / 'config' / 'yaml' / 'ppo.yaml')
+    def __init__(self, path, steps, lr, n_env, gamma, device='cpu'):
+        super().__init__(Path.cwd() / 'config' / 'yaml' / path)
         self.steps = steps
         self.n_env = n_env
         self.device = device
