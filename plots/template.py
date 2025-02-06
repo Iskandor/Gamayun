@@ -56,7 +56,8 @@ class ChartTemplates:
         self.templates[DPM].add_element('ppo_space', ['mean', 'std'], 'green', 'PPO space')
         self.templates[DPM].add_element('target_space', ['mean', 'std'], 'green', 'SND target space')
         self.templates[DPM].add_element('forward_space', ['mean', 'std'], 'green', 'forward space')
-        self.templates[DPM].add_element('loss_prediction', ['val'], 'magenta', 'loss prediction')
+        self.templates[DPM].add_composite([('loss_prediction_t0', 'magenta', 'loss prediction t0'),
+                                           ('loss_prediction_tH', 'orchid', 'loss prediction tH')], ['val'])
         self.templates[DPM].add_element('loss_distillation', ['val'], 'magenta', 'loss distillation')
         self.templates[DPM].add_element('loss_target', ['val'], 'magenta', 'loss target')
         self.templates[DPM].add_element('distillation_error', ['mean', 'std'], 'red', 'distillation error')

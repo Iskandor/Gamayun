@@ -19,6 +19,7 @@ class SNDLoss(nn.Module):
         # zt_state, pz_state, zt_next_state = self.model(states, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         loss_target = self.vicreg_loss(z_state_a, z_state_b)
+        print(loss_target.item())
         loss_distillation = self._distillation_loss(pz_state, zt_state.detach())
 
         ResultCollector().update(loss_target=loss_target.unsqueeze(-1).detach().cpu(),

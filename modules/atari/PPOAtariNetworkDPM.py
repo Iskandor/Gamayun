@@ -7,21 +7,42 @@ from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
 from modules.encoders.EncoderAtari import AtariStateEncoderLarge
 
 
-class ForwardModelDPM(nn.Module):
+class ForwardModelDPMv1(nn.Module):
     def __init__(self, config):
-        super(ForwardModelDPM, self).__init__()
+        super(ForwardModelDPMv1, self).__init__()
 
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
         self.forward_model_dim = config.forward_model_dim
 
-        # self.forward_model = nn.Sequential(
-        #     nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
-        #     nn.GELU(),
-        #     nn.Linear(self.forward_model_dim + self.action_dim, self.forward_model_dim),
-        #     nn.GELU(),
-        #     nn.Linear(self.forward_model_dim + self.action_dim, self.feature_dim),
-        # )
+        self.forward_model = nn.Sequential(
+            nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
+            nn.GELU(),
+            nn.Linear(self.forward_model_dim + self.action_dim, self.forward_model_dim),
+            nn.GELU(),
+            nn.Linear(self.forward_model_dim + self.action_dim, self.feature_dim),
+        )
+
+        gain = 0.5
+        init_orthogonal(self.forward_model[0], gain)
+        init_orthogonal(self.forward_model[2], gain)
+        init_orthogonal(self.forward_model[4], 0.01)
+
+    def forward(self, z_state, action):
+        y = self.forward_model[0](torch.cat([z_state, action], dim=1))
+        y = self.forward_model[2](torch.cat([y, action], dim=1))
+        y = self.forward_model[4](torch.cat([y, action], dim=1))
+
+        return y
+
+
+class ForwardModelDPMv2(nn.Module):
+    def __init__(self, config):
+        super(ForwardModelDPMv2, self).__init__()
+
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
+        self.forward_model_dim = config.forward_model_dim
 
         self.forward_model = nn.Sequential(
             nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
@@ -33,8 +54,6 @@ class ForwardModelDPM(nn.Module):
 
         gain = sqrt(2)
         init_orthogonal(self.forward_model[0], gain)
-        # init_orthogonal(self.forward_model[2], gain)
-        # init_orthogonal(self.forward_model[4], gain)
 
     def forward(self, z_state, action):
         y = self.forward_model[0](torch.cat([z_state, action], dim=1))
@@ -57,9 +76,9 @@ class PPOAtariNetworkDPM(PPOMotivationNetwork):
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
 
-        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=0.5)
         self.target_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
-        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=sqrt(2))
+        self.learned_model = AtariStateEncoderLarge(postprocessor_input_shape, self.feature_dim, gain=0.5)
 
         self.learned_projection = nn.Sequential(
             nn.GELU(),
@@ -68,13 +87,13 @@ class PPOAtariNetworkDPM(PPOMotivationNetwork):
             nn.Linear(self.feature_dim, self.feature_dim)
         )
 
-        gain = sqrt(2)
+        gain = 0.5
         init_orthogonal(self.learned_projection[1], gain)
         init_orthogonal(self.learned_projection[3], gain)
 
         # self.forward_model_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, gain=sqrt(2))
         self.forward_model_encoder = self.ppo_encoder
-        self.forward_model = ForwardModelDPM(config)
+        self.forward_model = ForwardModelDPMv1(config)
 
     @staticmethod
     def preprocess(state):
@@ -90,7 +109,7 @@ class PPOAtariNetworkDPM(PPOMotivationNetwork):
         if stage == ActivationStage.MOTIVATION_INFERENCE:
             zf_state = self.forward_model_encoder(state)
             zf_next_state = self.forward_model_encoder(next_state)
-            pzf_next_state = self.forward_model(zf_state, action)
+            pzf_next_state = self.forward_model(zf_state.detach(), action)
 
             zt_state = self.target_model(self.preprocess(state))
             pzt_state = self.learned_projection(self.learned_model(self.preprocess(state)))
@@ -100,15 +119,15 @@ class PPOAtariNetworkDPM(PPOMotivationNetwork):
         if stage == ActivationStage.MOTIVATION_TRAINING:
             zf_state = self.forward_model_encoder(state)
             zf_next_state = self.forward_model_encoder(next_state)
-            pzf_next_state = self.forward_model(zf_state, action)
+            pzf_next_state = self.forward_model(zf_state.detach(), action)
 
             zt_state = self.target_model(self.preprocess(state))
             zt_next_state = self.target_model(self.preprocess(next_state))
             pzt_state = self.learned_projection(self.learned_model(self.preprocess(state)))
 
-            return zt_state, pzt_state, zt_next_state, zf_next_state, pzf_next_state
+            return zt_state, pzt_state, zt_next_state, zf_state, zf_next_state, pzf_next_state
 
         if stage == ActivationStage.TRAJECTORY_UNWIND:
-            pz_next_state = self.forward_model(pf_state, action)
+            pz_next_state = self.forward_model(pf_state.detach(), action)
 
             return pz_next_state

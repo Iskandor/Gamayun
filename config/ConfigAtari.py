@@ -18,7 +18,7 @@ from utils.WrapperMontezuma import WrapperMontezuma
 
 class ConfigAtari(ConfigPPO):
     def __init__(self, env_name, steps, lr, n_env, gamma, num_threads, device, shift, path):
-        super().__init__(steps=steps, lr=lr, n_env=n_env, gamma=gamma, device=device)
+        super().__init__(path='ppo_atari.yaml', steps=steps, lr=lr, n_env=n_env, gamma=gamma, device=device)
 
         self.num_threads = num_threads
         self.shift = shift
@@ -278,8 +278,8 @@ class ConfigMontezumaDPM(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.motivation_scale = 0.25
-        self.motivation_horizon = 4
-        self.type = 'v1m3h4'
+        self.motivation_horizon = 16
+        self.type = 'v3m2h16'
 
         self.learned_projection_dim = self.feature_dim
         self.forward_model_dim = self.feature_dim * 4

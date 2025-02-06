@@ -18,7 +18,10 @@ class MultiEnvParallel:
         self.envs_list = envs_list
         self.envs_count = envs_count
         self.threads_count = thread_count
-        self.envs_per_thread = envs_count // thread_count
+        if envs_count >= thread_count:
+            self.envs_per_thread = envs_count // thread_count
+        else:
+            self.envs_per_thread = envs_count
 
         self.observations = numpy.zeros((envs_count,) + self.observation_space.shape, dtype=numpy.float32)
         # a = [None] * n_env

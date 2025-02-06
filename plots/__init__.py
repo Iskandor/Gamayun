@@ -53,7 +53,7 @@ def plot(name, config, keys, labels=None, legend=None, plot_overview=True, plot_
                 path = os.path.join(plot_root)
                 if not os.path.exists(path):
                     os.mkdir(path)
-                path = os.path.join(path, id)
+                path = os.path.join(path, '{0:s}_{1:s}'.format(model, id))
                 if not os.path.exists(path):
                     os.mkdir(path)
                 path = os.path.join(path, '{0:s}_{1:s}_{2:s}'.format(env, model, str(key['id'])))
