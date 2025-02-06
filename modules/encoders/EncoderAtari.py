@@ -139,7 +139,7 @@ class AtariStateEncoderLarge(nn.Module):
 
 class AtariStateEncoderResNet(nn.Module):
 
-    def __init__(self, input_shape, feature_dim, gain=sqrt(2)):
+    def __init__(self, input_shape, feature_dim, activation, gain=sqrt(2)):
         super().__init__()
         self.feature_size = feature_dim
         self.hidden_size = self.feature_size
@@ -152,12 +152,12 @@ class AtariStateEncoderResNet(nn.Module):
 
         self.main = nn.Sequential(
             torch.nn.Conv2d(input_shape[0], 32, kernel_size=3, stride=2, padding=1),
-            torch.nn.SiLU(),
+            activation(),
             torch.nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-            torch.nn.SiLU(),
+            activation(),
 
-            ResConvBlock(64, 64, 2, gain),
-            ResConvBlock(64, 64, 1, gain),
+            ResConvBlock(64, 64, 2, activation, gain),
+            ResConvBlock(64, 64, 1, activation, gain),
 
             torch.nn.Flatten(),
             torch.nn.Linear(self.final_conv_size, self.feature_size)
@@ -166,6 +166,7 @@ class AtariStateEncoderResNet(nn.Module):
         # gain = nn.init.calculate_gain('relu')
         init_orthogonal(self.main[0], gain)
         init_orthogonal(self.main[2], gain)
+        init_orthogonal(self.main[7], 0.01)
 
     def forward(self, inputs):
         out = self.main(inputs)

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pytorch_msssim import ssim
+from torch_topological.nn import VietorisRipsComplex, SignatureLoss
 
 from analytic.ResultCollector import ResultCollector
 from loss.VICRegLoss import VICRegLoss
@@ -14,6 +16,8 @@ class SNDv3Loss(nn.Module):
         self.model = model
 
         self.vicreg_loss = VICRegLoss()
+        self.vr = VietorisRipsComplex(dim=1)
+        self.topo_loss = SignatureLoss(p=2, dimensions=1)
 
     def __call__(self, states):
         zt_state, pz_state = self.model(states, stage=ActivationStage.MOTIVATION_TRAINING)
@@ -22,11 +26,10 @@ class SNDv3Loss(nn.Module):
         loss_target = sim_loss + vc_loss
         loss_distillation = self.distillation_loss(pz_state, zt_state.detach())
 
-        ResultCollector().update(loss_target=loss_target.unsqueeze(-1).detach().cpu(),
+        ResultCollector().update(sim_loss=sim_loss.unsqueeze(-1).detach().cpu(),
+                                 vc_loss=vc_loss.unsqueeze(-1).detach().cpu(),
                                  loss_distillation=loss_distillation.unsqueeze(-1).detach().cpu(),
                                  )
-
-        print(sim_loss.item(), vc_loss.item())
 
         return loss_target + loss_distillation
 
@@ -51,6 +54,21 @@ class SNDv3Loss(nn.Module):
     @staticmethod
     def distillation_loss(p_state, z_state):
         loss = F.mse_loss(p_state, z_state)
+        return loss
+
+    def topology_loss(self, state, z_state):
+        batch = state.shape[0]
+        s = state.reshape(batch, 1, -1)
+        z = z_state.unsqueeze(1)
+
+        pi_s = self.vr(s)
+        pi_z = self.vr(z)
+
+        loss = 0
+
+        for i in range(batch):
+            loss += self.topo_loss([s[i], pi_z[i]], [z[i], pi_s[i]])
+        loss += VICRegLoss.variance(z_state) + VICRegLoss.covariance(z_state) * 1 / 25
         return loss
 
     @staticmethod
@@ -92,8 +110,11 @@ class SNDv3Loss(nn.Module):
         dev_xx_sum = torch.sum(dev_xx, dim=1, keepdim=True)
         dev_yy_sum = torch.sum(dev_yy, dim=1, keepdim=True)
 
+        # if (dev_xx_sum == 0).nonzero().any() or (dev_yy_sum == 0).nonzero().any():
+        #     print(0)
+
         ncc = torch.div(dev_xy + eps / dev_xy.shape[1],
-                        torch.sqrt(torch.mul(dev_xx_sum, dev_yy_sum)) + eps)
+                        torch.sqrt(torch.mul(dev_xx_sum, dev_yy_sum) + eps) + eps)
         ncc_map = ncc.view(b, *shape[1:])
 
         # reduce
@@ -110,3 +131,20 @@ class SNDv3Loss(nn.Module):
             return ncc
 
         return ncc, ncc_map
+
+    def ssim_loss(self, states, z_state):
+        permutation = torch.randperm(states.shape[0])
+
+        states_a = states
+        states_b = torch.clone(states[permutation])
+        states_a = (states_a + 1) / 2
+        states_b = (states_b + 1) / 2
+
+        states_ssim = ssim(states_a, states_b, data_range=1, size_average=False)
+
+        z_state_a = z_state
+        z_state_b = torch.clone(z_state[permutation])
+
+        z_loss = F.mse_loss(z_state_a, z_state_b, reduction='none').mean(dim=1)
+
+        return F.mse_loss(z_loss, (1 - states_ssim)) + VICRegLoss.variance(z_state) + VICRegLoss.covariance(z_state) * 1 / 25

@@ -129,7 +129,7 @@ class ConfigMontezumaSNDv2(ConfigAtari):
 
 class ConfigMontezumaSNDv3(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=8, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift, path=path)
 
         self.motivation_lr = 1e-4
         self.motivation_scale = 1.

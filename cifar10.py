@@ -6,7 +6,6 @@ import torchvision.transforms as transforms
 from grokfast_pytorch import GrokFastAdamW
 from torch import optim
 from tqdm import tqdm
-import gudhi as gd
 
 from loss.SNDv3Loss import SNDv3Loss
 
@@ -62,7 +61,7 @@ class TestPipeline:
             nn.Linear(512, 512)
         )
 
-        self.device = 'cuda:1'
+        self.device = 'cuda:2'
 
 
     def evaluate_model(self, dataloader):
@@ -126,7 +125,8 @@ class TestPipeline:
         )
         model = model.to(self.device)
         model.train()
-        optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=5e-4)
+        optimizer = optim.AdamW(model.parameters(), lr=3e-3, weight_decay=5e-4)
+        criterion = SNDv3Loss(None, model)
 
         for epoch in range(epochs):  # loop over the dataset multiple times
             running_loss = []
@@ -139,8 +139,10 @@ class TestPipeline:
 
                 # forward + backward + optimize
                 outputs = model(inputs.to(self.device))
-                sim_loss, vc_loss = SNDv3Loss.metric_loss(inputs.to(self.device), outputs)
-                loss = sim_loss + vc_loss
+                # sim_loss, vc_loss = criterion.metric_loss(inputs.to(self.device), outputs)
+                # loss = sim_loss + vc_loss
+                # loss = criterion.topology_loss(inputs.to(self.device), outputs)
+                loss = criterion.ssim_loss(inputs.to(self.device), outputs)
                 loss.backward()
                 optimizer.step()
                 # scheduler.step()
@@ -192,7 +194,8 @@ if __name__ == '__main__':
     # scheduler = optim.lr_scheduler.CyclicLR(optimizer)
 
     pipeline = TestPipeline()
-    pipeline.pretrain_model(200)
+    # pipeline.train_model(100)
+    pipeline.pretrain_model(100)
     torch.save(pipeline.encoder.state_dict(), './cifar10_encoder.pt')
     pipeline.finetune_model(10)
 

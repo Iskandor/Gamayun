@@ -6,13 +6,13 @@ import torch.nn as nn
 
 
 class ResConvBlock(torch.nn.Module):
-    def __init__(self, in_ch, out_ch, stride, gain):
+    def __init__(self, in_ch, out_ch, stride, activation, gain):
         super(ResConvBlock, self).__init__()
 
         self.conv0 = torch.nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=stride, padding=1)
-        self.act0 = torch.nn.SiLU()
+        self.act0 = activation()
         self.conv1 = torch.nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1)
-        self.act1 = torch.nn.SiLU()
+        self.act1 = activation()
 
         torch.nn.init.orthogonal_(self.conv0.weight, gain)
         torch.nn.init.zeros_(self.conv0.bias)

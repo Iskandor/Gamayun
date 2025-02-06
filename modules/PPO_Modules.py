@@ -186,16 +186,15 @@ class PPONetwork(torch.nn.Module):
 
         self.config = config
         self.action_dim = config.action_dim
-        self.feature_dim = config.feature_dim
         self.ppo_feature_dim = config.ppo_feature_dim
 
         self.ppo_encoder = None
 
         self.critic = nn.Sequential(
             activation(),
-            nn.Linear(self.ppo_feature_dim, self.feature_dim),
+            nn.Linear(self.ppo_feature_dim, self.ppo_feature_dim),
             activation(),
-            nn.Linear(self.feature_dim, 1)
+            nn.Linear(self.ppo_feature_dim, 1)
         )
 
         init_orthogonal(self.critic[1], 0.1)
@@ -203,9 +202,9 @@ class PPONetwork(torch.nn.Module):
 
         self.actor = nn.Sequential(
             activation(),
-            nn.Linear(self.ppo_feature_dim, self.feature_dim),
+            nn.Linear(self.ppo_feature_dim, self.ppo_feature_dim),
             activation(),
-            DiscreteHead(self.feature_dim, config.action_dim)
+            DiscreteHead(self.ppo_feature_dim, config.action_dim)
         )
 
         init_orthogonal(self.actor[1], 0.01)
@@ -231,9 +230,9 @@ class PPOMotivationNetwork(PPONetwork):
 
         self.critic = nn.Sequential(
             activation(),
-            nn.Linear(self.ppo_feature_dim, self.feature_dim),
+            nn.Linear(self.ppo_feature_dim, self.ppo_feature_dim),
             activation(),
-            Critic2Heads(self.feature_dim)
+            Critic2Heads(self.ppo_feature_dim)
         )
 
         init_orthogonal(self.critic[1], 0.1)
