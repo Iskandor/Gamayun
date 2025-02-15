@@ -9,11 +9,15 @@ class PPOAtariFMNetwork(PPOMotivationNetwork):
     def __init__(self, config):
         super().__init__(config)
 
-        self.ppo_encoder = AtariStateEncoderLarge(config.input_shape, config.feature_dim)
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
+        self.input_shape = config.input_shape
+
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
         self.forward_model = nn.Sequential(
-            nn.Linear(config.feature_dim + config.action_dim, 512),
+            nn.Linear(self.feature_dim + self.action_dim, self.feature_dim),
             nn.ReLU(),
-            nn.Linear(512, config.feature_dim)
+            nn.Linear(self.feature_dim, self.feature_dim)
         )
 
     def forward(self, state=None, action=None, next_state=None, stage=0):

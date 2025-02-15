@@ -4,9 +4,9 @@ from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
-from FMLoss import STDIMLoss
-from PPOAtariFMNetwork import PPOAtariFMNetwork
-from FMMotivation import FMMotivation
+from loss.FMLoss import STDIMLoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariFMNetwork
+from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 
 
@@ -21,9 +21,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
                                                  self.model.ppo_encoder.local_layer_depth,
                                                  config.device),
                                        config.motivation_lr,
-                                       config.distillation_scale,
-                                       config.forward_scale,
-                                       config.forward_threshold,
+                                       config.eta,
                                        config.device)
         self.ppo = PPO(self.model,
                        config.lr,
