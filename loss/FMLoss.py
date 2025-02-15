@@ -32,7 +32,7 @@ class STDIMLoss(FMLoss):
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
         norm_loss *= 1e-4
-        total_loss = loss + norm_loss + super()._forward_loss()
+        total_loss = loss + norm_loss + super()._forward_loss(p_next_state, map_next_state)
         return total_loss
 
     def global_local_loss(self, z_next_state, map_state):

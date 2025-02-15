@@ -3,6 +3,7 @@ import yaml
 from agents.atari.PPOAtariA2Agent import PPOAtariA2Agent
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from agents.atari.PPOAtariDPMAgent import PPOAtariDPMAgent
+from agents.atari.PPOAtariFMAgent import PPOAtariFMAgent
 from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
 from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
 from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent
@@ -195,6 +196,31 @@ class ConfigMontezumaICM(ConfigAtari):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, '', trial)
 
         agent = PPOAtariICMAgent(self)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFM(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=8,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 1.0
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self)
         agent.training_loop(self.env, name, trial)
 
 
