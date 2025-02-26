@@ -20,14 +20,10 @@ class ArchitectureType(Enum):
 class PPOAtariFMAgent(PPOAtariAgent):
     def __init__(self, config, _type=0):
         super().__init__(config)
-        model_class, loss_class = self._set_up(_type)
-        self.model = model_class(config).to(config.device)
+        model_class, loss_class = self._set_up(self, config, _type)
+        self.model = model_class
         self.motivation = FMMotivation(self.model,
-                                       loss_class(config,
-                                                  self.model,
-                                                  self.model.ppo_encoder.hidden_size,
-                                                  self.model.ppo_encoder.local_layer_depth,
-                                                  config.device),
+                                       loss_class,
                                        config.motivation_lr,
                                        config.eta,
                                        config.device)
@@ -49,14 +45,16 @@ class PPOAtariFMAgent(PPOAtariAgent):
         self.hidden_average = ExponentialDecayNorm(config.hidden_dim, config.device)
 
     @staticmethod
-    def _set_up(_type):
+    def _set_up(self, config, _type=0):
         if _type == 0:
-            model_class = PPOAtariSTDIMNetwork
-            loss_class = STDIMLoss
-
-        if _type == 1:
-            model_class = PPOAtariIJEPANetwork
-            loss_class = IJEPALoss
+            model_class = PPOAtariSTDIMNetwork(config).to(config.device)
+            loss_class = STDIMLoss(model_class,
+                                   self.model.ppo_encoder.hidden_size,
+                                   self.model.ppo_encoder.local_layer_depth,
+                                   config.device)
+        else:
+            model_class = PPOAtariIJEPANetwork(config).to(config.device)
+            loss_class = IJEPALoss(model_class, config.device)
 
         return model_class, loss_class
 

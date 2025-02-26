@@ -16,7 +16,7 @@ class FMLoss(torch.nn.Module):
         return fwd_loss
 
 
-# STDIM specific loss + general one
+# ST-DIM specific loss + general one
 class STDIMLoss(FMLoss):
     def __init__(self, model, feature_size, local_layer_depth, device):
         super(STDIMLoss, self).__init__()
@@ -83,16 +83,19 @@ class STDIMLoss(FMLoss):
         return loss, norm_loss
 
 
-# STDIM specific loss + general one
+# ST-DIM specific loss + general one
 class IJEPALoss(FMLoss):
-    def __init__(self):
+    def __init__(self, model, device):
         super(IJEPALoss, self).__init__()
 
+        self.model = model
+        self.device = device
+
     def __call__(self, states, actions, next_states):
-        # Probably need to change the output of AtariLargeEncoder as we dont need fmaps
+        # Probably need to change the output of AtariLargeEncoder as we don't need f maps
         map_state, map_next_state, p_next_state, h_next_state = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
-        var_cov_loss = self._var_cov_loss(map_next_state)
+        var_cov_loss = self._var_cov_loss(self, map_next_state)
         hidden_loss = self._hidden_loss(h_next_state)
         forward_loss = super()._forward_loss(p_next_state, map_next_state)
         total_loss = var_cov_loss + hidden_loss + forward_loss
@@ -113,9 +116,11 @@ class IJEPALoss(FMLoss):
         loss = self.variance(z_state) + self.covariance(z_state) * 1 / 25
         return loss
 
+    @staticmethod
     def variance(z, gamma=1):
         return F.relu(gamma - z.std(0)).mean()
 
+    @staticmethod
     def covariance(z):
         n, d = z.shape
         mu = z.mean(0)
