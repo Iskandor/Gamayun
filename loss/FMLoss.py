@@ -1,5 +1,8 @@
 import torch
 import torch.nn.functional as F
+import torch.nn
+
+from modules.PPO_Modules import ActivationStage
 
 
 # General Forward Loss
@@ -24,7 +27,7 @@ class STDIMLoss(FMLoss):
         self.device = device
 
     def __call__(self, states, actions, next_states):
-        map_state, map_next_state, p_next_state = self.model(states, actions, next_states, stage=2)
+        map_state, map_next_state, p_next_state = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         local_local_loss, local_local_norm = self.local_local_loss(map_state, map_next_state)
         global_local_loss, global_local_norm = self.global_local_loss(p_next_state, map_state)
@@ -85,5 +88,38 @@ class IJEPALoss(FMLoss):
     def __init__(self):
         super(IJEPALoss, self).__init__()
 
-    def __call__(self, predicted_state, real_state):
-        return super()._forward_loss(predicted_state, real_state)
+    def __call__(self, states, actions, next_states):
+        # Probably need to change the output of AtariLargeEncoder as we dont need fmaps
+        map_state, map_next_state, p_next_state, h_next_state = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+
+        var_cov_loss = self._var_cov_loss(map_next_state)
+        hidden_loss = self._hidden_loss(h_next_state)
+        forward_loss = super()._forward_loss(p_next_state, map_next_state)
+        total_loss = var_cov_loss + hidden_loss + forward_loss
+
+        return total_loss
+        # return super()._forward_loss(predicted_state, real_state)
+
+    # forward model loss + hidden loss + var/cov loss
+    # hidden loss - gradually decreasing
+
+    @staticmethod
+    def _hidden_loss(h_next_state):
+        loss = torch.abs(h_next_state).mean() + (h_next_state.std(dim=0)).mean()
+        return loss
+
+    @staticmethod
+    def _var_cov_loss(self, z_state):
+        loss = self.variance(z_state) + self.covariance(z_state) * 1 / 25
+        return loss
+
+    def variance(z, gamma=1):
+        return F.relu(gamma - z.std(0)).mean()
+
+    def covariance(z):
+        n, d = z.shape
+        mu = z.mean(0)
+        cov = torch.matmul((z - mu).t(), z - mu) / (n - 1)
+        cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / d
+
+        return cov_loss

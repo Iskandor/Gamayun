@@ -1,25 +1,33 @@
 import torch
 
+from enum import Enum
 from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
-from loss.FMLoss import STDIMLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariFMNetwork
+from loss.FMLoss import STDIMLoss, IJEPALoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMNetwork, PPOAtariIJEPANetwork
 from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
+from modules.PPO_Modules import ActivationStage
+
+
+class ArchitectureType(Enum):
+    ST_DIM = 0
+    I_JEPA = 1
 
 
 class PPOAtariFMAgent(PPOAtariAgent):
-    def __init__(self, config):
+    def __init__(self, config, _type=0):
         super().__init__(config)
-        self.model = PPOAtariFMNetwork(config).to(config.device)
+        model_class, loss_class = self._set_up(_type)
+        self.model = model_class(config).to(config.device)
         self.motivation = FMMotivation(self.model,
-                                       STDIMLoss(config,
-                                                 self.model,
-                                                 self.model.ppo_encoder.hidden_size,
-                                                 self.model.ppo_encoder.local_layer_depth,
-                                                 config.device),
+                                       loss_class(config,
+                                                  self.model,
+                                                  self.model.ppo_encoder.hidden_size,
+                                                  self.model.ppo_encoder.local_layer_depth,
+                                                  config.device),
                                        config.motivation_lr,
                                        config.eta,
                                        config.device)
@@ -40,6 +48,18 @@ class PPOAtariFMAgent(PPOAtariAgent):
 
         self.hidden_average = ExponentialDecayNorm(config.hidden_dim, config.device)
 
+    @staticmethod
+    def _set_up(_type):
+        if _type == 0:
+            model_class = PPOAtariSTDIMNetwork
+            loss_class = STDIMLoss
+
+        if _type == 1:
+            model_class = PPOAtariIJEPANetwork
+            loss_class = IJEPALoss
+
+        return model_class, loss_class
+
     def _initialize_info(self, trial):
         info_points = [
             ('re', ['sum', 'step'], 'ext. reward', 0),
@@ -53,7 +73,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
 
     def _step(self, env, trial, state, mode):
         with torch.no_grad():
-            value, action, probs = self.model(state, stage=0)
+            value, action, probs = self.model(state, stage=ActivationStage.INFERENCE)
             next_state, reward, done, trunc, info = env.step(self._convert_action(action.cpu()))
             self._check_terminal_states(env, mode, done, next_state)
 
@@ -63,7 +83,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
             if mode == AgentMode.TRAINING:
                 self.state_average.update(next_state)
 
-            z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=1)
+            z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
             int_reward = self.motivation.reward(z_next_state, p_next_state)
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
