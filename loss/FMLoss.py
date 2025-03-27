@@ -22,8 +22,8 @@ class STDIMLoss(FMLoss):
         super(STDIMLoss, self).__init__()
 
         self.model = model
-        self.projection1 = torch.nn.Linear(feature_size, local_layer_depth)  # x1 = global, x2=patch, n_channels = 32
-        self.projection2 = torch.nn.Linear(local_layer_depth, local_layer_depth)
+        self.projection1 = torch.nn.Linear(feature_size, local_layer_depth).to(device)  # x1 = global, x2=patch, n_channels = 32
+        self.projection2 = torch.nn.Linear(local_layer_depth, local_layer_depth).to(device)
         self.device = device
 
     def __call__(self, states, actions, next_states):
