@@ -5,6 +5,7 @@ from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
+from analytic.ResultCollector import ResultCollector
 from loss.FMLoss import STDIMLoss, IJEPALoss
 from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMNetwork, PPOAtariIJEPANetwork
 from motivation.FMMotivation import FMMotivation
@@ -42,15 +43,15 @@ class PPOAtariFMAgent(PPOAtariAgent):
                        device=config.device,
                        motivation=True)
 
-        self.hidden_average = ExponentialDecayNorm(config.hidden_dim, config.device)
+        self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     @staticmethod
-    def _set_up(self, config, _type=0):
-        if _type == 0:
+    def _set_up(self, config, _type=ArchitectureType.ST_DIM):
+        if _type == ArchitectureType.ST_DIM:
             model_class = PPOAtariSTDIMNetwork(config).to(config.device)
             loss_class = STDIMLoss(model_class,
-                                   self.model.ppo_encoder.hidden_size,
-                                   self.model.ppo_encoder.local_layer_depth,
+                                   model_class.ppo_encoder.hidden_size,
+                                   model_class.ppo_encoder.local_layer_depth,
                                    config.device)
         else:
             model_class = PPOAtariIJEPANetwork(config).to(config.device)
@@ -68,6 +69,11 @@ class PPOAtariFMAgent(PPOAtariAgent):
         info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
 
         return info
+
+    def _initialize_analysis(self):
+        analysis = ResultCollector()
+        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,))
+        return analysis
 
     def _step(self, env, trial, state, mode):
         with torch.no_grad():
@@ -97,6 +103,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
             feature_space=feature_dist
         )
         self.analytics.end_step()
+    
 
         if mode == AgentMode.TRAINING:
             self.memory.add(state=state.cpu(),

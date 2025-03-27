@@ -220,7 +220,7 @@ class ConfigMontezumaFMSTDIM(ConfigAtari):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(f"Starting training: {name}")
 
-        agent = PPOAtariFMAgent(self, ArchitectureType.ST_DIM)
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM)
         agent.training_loop(self.env, name, trial)
 
 
@@ -239,13 +239,14 @@ class ConfigMontezumaFMIJEPA(ConfigAtari):
         self.motivation_lr = 1e-4
         self.eta = 1.0
         self.type = 'st-dim_fm'
+        self.hidden_dim = self.feature_dim // 4
 
     def train(self, trial):
         trial += self.shift
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(f"Starting training: {name}")
 
-        agent = PPOAtariFMAgent(self, ArchitectureType.I_JEPA)
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA)
         agent.training_loop(self.env, name, trial)
 
 

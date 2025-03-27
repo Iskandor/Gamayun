@@ -28,22 +28,25 @@ class STDIMLoss(FMLoss):
 
     def __call__(self, states, actions, next_states):
         map_state, map_next_state, p_next_state = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+        
+        map_state_f5 = map_state['f5']
+        map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
 
-        local_local_loss, local_local_norm = self.local_local_loss(map_state, map_next_state)
-        global_local_loss, global_local_norm = self.global_local_loss(p_next_state, map_state)
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
 
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
         norm_loss *= 1e-4
-        total_loss = loss + norm_loss + super()._forward_loss(p_next_state, map_next_state)
+        total_loss = loss + norm_loss + super()._forward_loss(p_next_state, map_next_state_out)
         return total_loss
 
     def global_local_loss(self, z_next_state, map_state):
         # Loss 1: Global at time t, f5 patches at time t-1
-        N = map_state.size(0)
+        N = z_next_state.size(0)
         sy = map_state.size(1)
         sx = map_state.size(2)
-
+        
         positive = []
         for y in range(sy):
             for x in range(sx):
@@ -61,7 +64,7 @@ class STDIMLoss(FMLoss):
 
     def local_local_loss(self, map_state, map_next_state):
         # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_state.size(0)
+        N = map_next_state.size(0)
         sy = map_state.size(1)
         sx = map_state.size(2)
 
