@@ -202,7 +202,7 @@ class ConfigMontezumaICM(ConfigAtari):
 class ConfigMontezumaFMSTDIM(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
-                         steps=8,
+                         steps=128,
                          lr=1e-4,
                          n_env=128,
                          gamma=[0.998, 0.99],
@@ -227,7 +227,7 @@ class ConfigMontezumaFMSTDIM(ConfigAtari):
 class ConfigMontezumaFMIJEPA(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
-                         steps=8,
+                         steps=128,
                          lr=1e-4,
                          n_env=128,
                          gamma=[0.998, 0.99],
