@@ -21,7 +21,7 @@ class ArchitectureType(Enum):
 class PPOAtariFMAgent(PPOAtariAgent):
     def __init__(self, config, _type=0):
         super().__init__(config)
-        model_class, loss_class = self._set_up(self, config, _type)
+        model_class, loss_class = self._set_up(config, _type)
         self.model = model_class
         self.motivation = FMMotivation(self.model,
                                        loss_class,
@@ -43,10 +43,10 @@ class PPOAtariFMAgent(PPOAtariAgent):
                        device=config.device,
                        motivation=True)
 
-        self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
+        #self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     @staticmethod
-    def _set_up(self, config, _type=ArchitectureType.ST_DIM):
+    def _set_up(config, _type=ArchitectureType.ST_DIM):
         if _type == ArchitectureType.ST_DIM:
             model_class = PPOAtariSTDIMNetwork(config).to(config.device)
             loss_class = STDIMLoss(model_class,
@@ -64,7 +64,11 @@ class PPOAtariFMAgent(PPOAtariAgent):
             ('re', ['sum', 'step'], 'ext. reward', 0),
             ('ri', ['mean', 'std', 'max'], 'int. reward', 0),
             ('score', ['sum'], 'score', 0),
-            ('feature_space', ['mean', 'std'], 'feature space', 0)
+            ('feature_space', ['mean', 'std'], 'feature space', 0),
+            ('loss', ['mean', 'std', 'max'], 'loss', 0),
+            ('norm_loss', ['mean', 'std', 'max'], 'norm_loss', 0),
+            ('fwd_loss', ['mean', 'std', 'max'], 'fwd_loss', 0),
+            ('total_loss', ['mean', 'std', 'max'], 'total_loss', 0)
         ]
         info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
 
@@ -72,7 +76,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
 
     def _initialize_analysis(self):
         analysis = ResultCollector()
-        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,))
+        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):
@@ -82,10 +86,10 @@ class PPOAtariFMAgent(PPOAtariAgent):
             self._check_terminal_states(env, mode, done, next_state)
 
             next_state = self._encode_state(next_state)
-            next_state = self.state_average.process(next_state).clip_(-4., 4.)
+            #next_state = self.state_average.process(next_state).clip_(-4., 4.)
 
-            if mode == AgentMode.TRAINING:
-                self.state_average.update(next_state)
+            #if mode == AgentMode.TRAINING:
+            #    self.state_average.update(next_state)
 
             z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
             int_reward = self.motivation.reward(z_next_state, p_next_state)

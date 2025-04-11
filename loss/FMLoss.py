@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch.nn
 
 from modules.PPO_Modules import ActivationStage
-
+from analytic.ResultCollector import ResultCollector
 
 # General Forward Loss
 class FMLoss(torch.nn.Module):
@@ -38,7 +38,15 @@ class STDIMLoss(FMLoss):
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
         norm_loss *= 1e-4
-        total_loss = loss + norm_loss + super()._forward_loss(p_next_state, map_next_state_out)
+        
+        fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
+        total_loss = loss + norm_loss + fwd_loss
+
+        ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
+                                 norm_loss=norm_loss.unsqueeze(-1).detach().cpu(),
+                                 fwd_loss=fwd_loss.unsqueeze(-1).detach().cpu(),
+                                 total_loss=total_loss.unsqueeze(-1).detach().cpu())
+        
         return total_loss
 
     def global_local_loss(self, z_next_state, map_state):
