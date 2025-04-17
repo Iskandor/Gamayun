@@ -1,7 +1,7 @@
 --find-links https://download.pytorch.org/whl/torch_stable.html
 box2d-py
 etaprogress~=1.1.1
-gymnasium[atari, accept-rom-license]
+gymnasium[atari]
 crafter
 imageio~=2.16.1
 matplotlib~=3.5.1

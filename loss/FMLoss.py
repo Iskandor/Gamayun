@@ -111,6 +111,11 @@ class IJEPALoss(FMLoss):
         forward_loss = super()._forward_loss(p_next_state, map_next_state)
         total_loss = var_cov_loss + hidden_loss + forward_loss
 
+        ResultCollector().update(loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
+                                 norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
+                                 fwd_loss=forward_loss.unsqueeze(-1).detach().cpu(),
+                                 total_loss=total_loss.unsqueeze(-1).detach().cpu())
+
         return total_loss
         # return super()._forward_loss(predicted_state, real_state)
 

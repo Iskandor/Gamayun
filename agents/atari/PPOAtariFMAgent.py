@@ -65,6 +65,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
             ('ri', ['mean', 'std', 'max'], 'int. reward', 0),
             ('score', ['sum'], 'score', 0),
             ('feature_space', ['mean', 'std'], 'feature space', 0),
+            ('error', ['mean', 'std'], 'error', 0),
             ('loss', ['mean', 'std', 'max'], 'loss', 0),
             ('norm_loss', ['mean', 'std', 'max'], 'norm_loss', 0),
             ('fwd_loss', ['mean', 'std', 'max'], 'fwd_loss', 0),
@@ -76,7 +77,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
 
     def _initialize_analysis(self):
         analysis = ResultCollector()
-        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,))
+        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):
@@ -92,7 +93,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
             #    self.state_average.update(next_state)
 
             z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
-            int_reward = self.motivation.reward(z_next_state, p_next_state)
+            error, int_reward = self.motivation.reward(z_next_state, p_next_state)
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
         reward = torch.cat([ext_reward, int_reward.cpu()], dim=1)
@@ -104,7 +105,8 @@ class PPOAtariFMAgent(PPOAtariAgent):
             re=ext_reward,
             ri=int_reward,
             score=score,
-            feature_space=feature_dist
+            feature_space=feature_dist,
+            error=error
         )
         self.analytics.end_step()
     

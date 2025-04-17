@@ -74,7 +74,7 @@ class PPOAtariIJEPANetwork(PPOAtariFMNetwork):
         init_orthogonal(self.hidden_model[5], gain)
 
         self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim, self.feature_dim),
+            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim),
             nn.ReLU(),
             nn.Linear(self.feature_dim, self.feature_dim),
             nn.ReLU(),
@@ -95,12 +95,12 @@ class PPOAtariIJEPANetwork(PPOAtariFMNetwork):
             encoded_state = self.ppo_encoder(state)
             encoded_next_state = self.ppo_encoder(next_state)
             hidden_next_state = self.hidden_model(encoded_next_state)
-            predicted_next_state = self.forward_model(torch.cat([encoded_state, hidden_next_state, action], dim=1))
+            predicted_next_state = self.forward_model(torch.cat([encoded_state, action, hidden_next_state], dim=1))
             return encoded_state, encoded_next_state, predicted_next_state
 
         if stage == ActivationStage.MOTIVATION_TRAINING:
             encoded_state = self.ppo_encoder(state)
             encoded_next_state = self.ppo_encoder(next_state)
             hidden_next_state = self.hidden_model(encoded_next_state)
-            predicted_next_state = self.forward_model(torch.cat([encoded_state, hidden_next_state, action], dim=1))
+            predicted_next_state = self.forward_model(torch.cat([encoded_state, action, hidden_next_state], dim=1))
             return encoded_state, encoded_next_state, predicted_next_state, hidden_next_state

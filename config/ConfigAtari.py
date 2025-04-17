@@ -202,9 +202,9 @@ class ConfigMontezumaICM(ConfigAtari):
 class ConfigMontezumaFMSTDIM(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
-                         steps=128,
+                         steps=32,
                          lr=1e-4,
-                         n_env=128,
+                         n_env=64,
                          gamma=[0.998, 0.99],
                          num_threads=num_threads,
                          device=device,
@@ -212,7 +212,7 @@ class ConfigMontezumaFMSTDIM(ConfigAtari):
                          path=path)
 
         self.motivation_lr = 1e-4
-        self.eta = 1.0
+        self.eta = 0.01
         self.type = 'st-dim_fm'
 
     def train(self, trial):
@@ -224,12 +224,12 @@ class ConfigMontezumaFMSTDIM(ConfigAtari):
         agent.training_loop(self.env, name, trial)
 
 
-class ConfigMontezumaFMIJEPA(ConfigAtari):
+class ConfigMontezumaFMSTDIM_0_01_32_32(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
-                         steps=128,
+                         steps=32,
                          lr=1e-4,
-                         n_env=128,
+                         n_env=32,
                          gamma=[0.998, 0.99],
                          num_threads=num_threads,
                          device=device,
@@ -237,7 +237,81 @@ class ConfigMontezumaFMIJEPA(ConfigAtari):
                          path=path)
 
         self.motivation_lr = 1e-4
-        self.eta = 1.0
+        self.eta = 0.01
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigMontezumaFMSTDIM_0_05_32_32(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=32,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.05
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMSTDIM_0_05_32_64(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=64,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.05
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_0_01_32_32(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=32,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
         self.type = 'st-dim_fm'
         self.hidden_dim = self.feature_dim // 4
 
