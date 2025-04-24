@@ -93,7 +93,7 @@ class AtariStateEncoderUniversal(nn.Module):
 
 class AtariStateEncoderLarge(nn.Module):
 
-    def __init__(self, input_shape, feature_dim, activation=nn.GELU, gain=0.5):
+    def __init__(self, input_shape, feature_dim, activation=nn.ReLU, gain=sqrt(2)):
         super().__init__()
         self.feature_size = feature_dim
         self.hidden_size = self.feature_size
@@ -121,7 +121,7 @@ class AtariStateEncoderLarge(nn.Module):
         init_orthogonal(self.main[2], gain)
         init_orthogonal(self.main[4], gain)
         init_orthogonal(self.main[6], gain)
-        init_orthogonal(self.main[9], 0.01)
+        init_orthogonal(self.main[9], gain)
 
         self.local_layer_depth = self.main[4].out_channels
 
