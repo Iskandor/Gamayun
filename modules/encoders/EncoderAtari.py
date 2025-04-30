@@ -93,7 +93,7 @@ class AtariStateEncoderUniversal(nn.Module):
 
 class AtariStateEncoderLarge(nn.Module):
 
-    def __init__(self, input_shape, feature_dim, activation=nn.ReLU, gain=sqrt(2)):
+    def __init__(self, input_shape, feature_dim, activation=nn.ReLU, gain=0.5):
         super().__init__()
         self.feature_size = feature_dim
         self.hidden_size = self.feature_size
