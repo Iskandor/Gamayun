@@ -18,14 +18,15 @@ class PPOAtariSTDIMNetwork(PPOAtariFMNetwork):
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
         self.input_shape = config.input_shape
+        self.forward_model_dim = config.forward_model_dim
 
         self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
         self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim, self.feature_dim),
+            nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
             nn.ReLU(),
-            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.Linear(self.forward_model_dim, self.forward_model_dim),
             nn.ReLU(),
-            nn.Linear(self.feature_dim, self.feature_dim)
+            nn.Linear(self.forward_model_dim, self.feature_dim)
         )
 
         init_orthogonal(self.forward_model[0], np.sqrt(2))
