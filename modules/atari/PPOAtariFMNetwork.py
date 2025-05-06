@@ -5,6 +5,7 @@ import numpy as np
 from modules import init_orthogonal
 from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
 from modules.encoders.EncoderAtari import AtariStateEncoderLarge
+from modules.forward_models.ForwardModel import ForwardModel
 
 
 class PPOAtariFMNetwork(PPOMotivationNetwork):
@@ -21,17 +22,8 @@ class PPOAtariSTDIMNetwork(PPOAtariFMNetwork):
         self.forward_model_dim = config.forward_model_dim
 
         self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
-        self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
-            nn.ReLU(),
-            nn.Linear(self.forward_model_dim, self.forward_model_dim),
-            nn.ReLU(),
-            nn.Linear(self.forward_model_dim, self.feature_dim)
-        )
 
-        init_orthogonal(self.forward_model[0], np.sqrt(2))
-        init_orthogonal(self.forward_model[2], np.sqrt(2))
-        init_orthogonal(self.forward_model[4], np.sqrt(2))
+        self.forward_model = ForwardModel(config)
 
     def forward(self, state=None, action=None, next_state=None, stage=0):
         if stage == ActivationStage.INFERENCE:
