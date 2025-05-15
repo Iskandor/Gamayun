@@ -5,7 +5,7 @@ import torch.nn
 from modules.PPO_Modules import ActivationStage
 from analytic.ResultCollector import ResultCollector
 
-# General Forward Loss
+# General Forward and inverse Loss
 class FMLoss(torch.nn.Module):
     def __init__(self):
         super(FMLoss, self).__init__()
@@ -14,6 +14,19 @@ class FMLoss(torch.nn.Module):
     def _forward_loss(predicted_state, real_state):
         fwd_loss = F.mse_loss(predicted_state, real_state)
         return fwd_loss
+    
+    @staticmethod
+    def _inverse_loss(action_encoder, action_forward_model, actions):
+        if actions.dim() == 2:
+            actions = actions.argmax(dim=1).long()
+
+        preds_encoder = action_encoder.argmax(dim=1)
+        acc_encoder = (preds_encoder == actions).float().mean()
+        preds_forward_model = action_forward_model.argmax(dim=1)
+        acc_forward_model = (preds_forward_model == actions).float().mean()
+
+        inverse_loss = F.cross_entropy(action_encoder, actions)
+        return inverse_loss, acc_encoder, acc_forward_model
 
 
 # ST-DIM specific loss + general one
@@ -27,8 +40,8 @@ class STDIMLoss(FMLoss):
         self.device = device
 
     def __call__(self, states, actions, next_states):
-        map_state, map_next_state, p_next_state = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
-        
+        map_state, map_next_state, p_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
 
@@ -39,13 +52,16 @@ class STDIMLoss(FMLoss):
         norm_loss = global_local_norm + local_local_norm
         norm_loss *= 1e-4
         
+        inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
         fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
-        total_loss = loss + norm_loss + fwd_loss
+        total_loss = loss + norm_loss + fwd_loss + inverse_loss
 
         ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
                                  norm_loss=norm_loss.unsqueeze(-1).detach().cpu(),
                                  fwd_loss=fwd_loss.unsqueeze(-1).detach().cpu(),
-                                 total_loss=total_loss.unsqueeze(-1).detach().cpu())
+                                 total_loss=total_loss.unsqueeze(-1).detach().cpu(),
+                                 acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
+                                 acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu())
         
         return total_loss
 

@@ -11,6 +11,7 @@ from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMNetwork, PPOAtariIJEPAN
 from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
+from modules.forward_models.ForwardModel import ForwardModelType
 
 
 class ArchitectureType(Enum):
@@ -19,9 +20,9 @@ class ArchitectureType(Enum):
 
 
 class PPOAtariFMAgent(PPOAtariAgent):
-    def __init__(self, config, _type=0):
+    def __init__(self, config, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModel):
         super().__init__(config)
-        model_class, loss_class = self._set_up(config, _type)
+        model_class, loss_class = self._set_up(config, _type, forward_model_type)
         self.model = model_class
         self.motivation = FMMotivation(self.model,
                                        loss_class,
@@ -46,9 +47,9 @@ class PPOAtariFMAgent(PPOAtariAgent):
         #self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     @staticmethod
-    def _set_up(config, _type=ArchitectureType.ST_DIM):
+    def _set_up(config, _type, forward_model_type):
         if _type == ArchitectureType.ST_DIM:
-            model_class = PPOAtariSTDIMNetwork(config).to(config.device)
+            model_class = PPOAtariSTDIMNetwork(config, forward_model_type).to(config.device)
             loss_class = STDIMLoss(model_class,
                                    model_class.ppo_encoder.hidden_size,
                                    model_class.ppo_encoder.local_layer_depth,
@@ -69,7 +70,9 @@ class PPOAtariFMAgent(PPOAtariAgent):
             ('loss', ['mean', 'std', 'max'], 'loss', 0),
             ('norm_loss', ['mean', 'std', 'max'], 'norm_loss', 0),
             ('fwd_loss', ['mean', 'std', 'max'], 'fwd_loss', 0),
-            ('total_loss', ['mean', 'std', 'max'], 'total_loss', 0)
+            ('total_loss', ['mean', 'std', 'max'], 'total_loss', 0),
+            ('acc_encoder', ['mean', 'std', 'max'], 'acc_encoder', 0),
+            ('acc_forward_model', ['mean', 'std', 'max'], 'acc_forward_model', 0)
         ]
         info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
 
@@ -77,7 +80,9 @@ class PPOAtariFMAgent(PPOAtariAgent):
 
     def _initialize_analysis(self):
         analysis = ResultCollector()
-        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,))
+        analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), 
+                      error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,), 
+                      acc_encoder=(1,), acc_forward_model=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):

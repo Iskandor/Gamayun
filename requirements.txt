@@ -2,6 +2,8 @@
 box2d-py
 etaprogress~=1.1.1
 gymnasium[atari]
+gym[atari]
+gym[accept-rom-license]
 crafter
 imageio~=2.16.1
 matplotlib~=3.5.1
@@ -25,3 +27,6 @@ procgen~=0.10.7
 pyyaml~=5.4.1
 giotto-tda
 kaleido
+# SNDv3
+pytorch_msssim~=1.0.0
+torch_topological~=0.1.7

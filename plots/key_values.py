@@ -22,6 +22,11 @@ key_values = {
     'augmentor_loss_var': 'val',
     'augmentor_loss_con': 'val',
     'loss_forward': 'val',
+    'loss': 'mean',
+    'norm_loss': 'mean',
+    'fwd_loss': 'mean',
+    'acc_encoder': 'mean',
+    'acc_forward_model': 'mean'
 }
 
 for v in NoveltyMetric.VAL:

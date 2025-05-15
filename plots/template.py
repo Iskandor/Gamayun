@@ -27,6 +27,8 @@ class ChartTemplates:
         SND = 'snd'
         SNDV2 = 'sndv2'
         SEER = 'seer'
+        FWD = 'fm'
+        IJEPA = 'ijepa'
 
         self.templates = {
             A2: Template(),
@@ -34,6 +36,8 @@ class ChartTemplates:
             SND: Template(),
             SNDV2: Template(),
             SEER: Template(),
+            FWD: Template(),
+            IJEPA: Template()
         }
 
         self.templates[SND].add_element('re', ['sum'], 'blue', 'external reward')
@@ -42,6 +46,18 @@ class ChartTemplates:
         self.templates[SND].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
         self.templates[SND].add_element('loss_prediction', ['val'], 'magenta', 'loss prediction')
         self.templates[SND].add_element('loss_target', ['val'], 'magenta', 'loss target')
+
+        self.templates[FWD].add_element('re', ['sum'], 'blue', 'external reward')
+        self.templates[FWD].add_element('score', ['sum'], 'blue', 'score')
+        self.templates[FWD].add_element('ri', ['mean', 'std', 'max'], 'red', 'intrinsic reward')
+        self.templates[FWD].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
+        self.templates[FWD].add_element('error', ['mean', 'std', 'max'], 'green', 'error')
+
+        self.templates[IJEPA].add_element('re', ['sum'], 'blue', 'external reward')
+        self.templates[IJEPA].add_element('score', ['sum'], 'blue', 'score')
+        self.templates[IJEPA].add_element('ri', ['mean', 'std', 'max'], 'red', 'intrinsic reward')
+        self.templates[IJEPA].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
+        self.templates[IJEPA].add_element('error', ['mean', 'std', 'max'], 'green', 'error')
 
         self.templates[SNDV2].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates[SNDV2].add_element('score', ['sum'], 'blue', 'score')
