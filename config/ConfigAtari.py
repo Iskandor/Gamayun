@@ -377,6 +377,137 @@ class ConfigMontezumaFMSTDIM_32_feature_dim_4096_skip_connection(ConfigAtari):
         agent.training_loop(self.env, name, trial)
 
 
+class ConfigMontezumaFMSTDIM_32_feature_dim_4096_skip_connection_twice(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnectionTwice)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMSTDIM_32_feature_dim_4096_skip_connection_pyramid_scheme(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnectionPyramidScheme)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMSTDIM_32_feature_dim_4096_skip_connection_batch_norm(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnectionBatchNorm)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMSTDIM_128_feature_dim_4096_skip_connection(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=128,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_32_feature_dim_4096_skip_connection(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim // 4
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
 class ConfigMontezumaFMIJEPA_32(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',

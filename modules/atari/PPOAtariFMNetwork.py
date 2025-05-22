@@ -53,7 +53,7 @@ class PPOAtariSTDIMNetwork(PPOAtariFMNetwork):
             map_next_state = self.ppo_encoder(next_state, fmaps=True)
             predicted_next_state = self.forward_model(torch.cat([map_state['out'], action], dim=1))
 
-            map_state_detached  = map_state['out'].detach()
+            map_state_detached = map_state['out'].detach()
             map_next_state_detached = map_next_state['out'].detach()
             predicted_next_state_detached = predicted_next_state.detach()
             action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
@@ -62,7 +62,7 @@ class PPOAtariSTDIMNetwork(PPOAtariFMNetwork):
 
 
 class PPOAtariIJEPANetwork(PPOAtariFMNetwork):
-    def __init__(self, config):
+    def __init__(self, config, forward_model_type):
         super().__init__(config)
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
@@ -84,17 +84,20 @@ class PPOAtariIJEPANetwork(PPOAtariFMNetwork):
         init_orthogonal(self.hidden_model[3], gain)
         init_orthogonal(self.hidden_model[5], gain)
 
-        self.forward_model = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim + self.hidden_dim, self.feature_dim),
+        self.forward_model = chooseModel(config, forward_model_type)
+
+        self.inverse_model = nn.Sequential(
+            nn.Linear(self.feature_dim * 2, self.feature_dim * 2),
             nn.ReLU(),
-            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.Linear(self.feature_dim * 2, self.feature_dim),
             nn.ReLU(),
-            nn.Linear(self.feature_dim, self.feature_dim)
+            nn.Linear(self.feature_dim, self.action_dim)
         )
 
-        init_orthogonal(self.forward_model[0], gain)
-        init_orthogonal(self.forward_model[2], gain)
-        init_orthogonal(self.forward_model[4], gain)
+        gain = np.sqrt(2)
+        init_orthogonal(self.inverse_model[0], gain)
+        init_orthogonal(self.inverse_model[2], gain)
+        init_orthogonal(self.inverse_model[4], gain)
 
     def forward(self, state=None, action=None, next_state=None, stage=0):
         if stage == ActivationStage.INFERENCE:
@@ -114,4 +117,10 @@ class PPOAtariIJEPANetwork(PPOAtariFMNetwork):
             encoded_next_state = self.ppo_encoder(next_state)
             hidden_next_state = self.hidden_model(encoded_next_state)
             predicted_next_state = self.forward_model(torch.cat([encoded_state, action, hidden_next_state], dim=1))
-            return encoded_state, encoded_next_state, predicted_next_state, hidden_next_state
+
+            map_state_detached = encoded_state.detach()
+            map_next_state_detached = encoded_next_state.detach()
+            predicted_next_state_detached = predicted_next_state.detach()
+            action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
+            action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
+            return encoded_state, encoded_next_state, predicted_next_state, hidden_next_state, action_encoder, action_forward_model

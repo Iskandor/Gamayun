@@ -55,7 +55,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
                                    model_class.ppo_encoder.local_layer_depth,
                                    config.device)
         else:
-            model_class = PPOAtariIJEPANetwork(config).to(config.device)
+            model_class = PPOAtariIJEPANetwork(config, forward_model_type).to(config.device)
             loss_class = IJEPALoss(model_class, config.device)
 
         return model_class, loss_class

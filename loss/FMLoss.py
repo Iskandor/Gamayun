@@ -120,17 +120,21 @@ class IJEPALoss(FMLoss):
 
     def __call__(self, states, actions, next_states):
         # Probably need to change the output of AtariLargeEncoder as we don't need f maps
-        map_state, map_next_state, p_next_state, h_next_state = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+        map_state, map_next_state, p_next_state, h_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         var_cov_loss = self._var_cov_loss(self, map_next_state)
         hidden_loss = self._hidden_loss(h_next_state)
         forward_loss = super()._forward_loss(p_next_state, map_next_state)
-        total_loss = var_cov_loss + hidden_loss + forward_loss
+        inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
+
+        total_loss = var_cov_loss + hidden_loss + forward_loss + inverse_loss
 
         ResultCollector().update(loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
                                  norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
                                  fwd_loss=forward_loss.unsqueeze(-1).detach().cpu(),
-                                 total_loss=total_loss.unsqueeze(-1).detach().cpu())
+                                 total_loss=total_loss.unsqueeze(-1).detach().cpu(),
+                                 acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
+                                 acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu())
 
         return total_loss
         # return super()._forward_loss(predicted_state, real_state)
