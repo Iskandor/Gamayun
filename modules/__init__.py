@@ -1,8 +1,8 @@
-from enum import Enum
 from math import sqrt
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ResConvBlock(torch.nn.Module):
@@ -54,6 +54,39 @@ class ResMLPBlock(nn.Module):
     def forward(self, x):
         y = self.skip(x) + self.block(x)
         return y
+
+
+class AttentionBlock(nn.Module):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True, gain: float = sqrt(2)):
+        super(AttentionBlock, self).__init__()
+        self.query_proj = nn.Linear(in_features, out_features, bias)
+        self.key_proj = nn.Linear(in_features, out_features, bias)
+        self.value_proj = nn.Linear(in_features, out_features, bias)
+
+        init_orthogonal(self.query_proj, gain)
+        init_orthogonal(self.key_proj, gain)
+        init_orthogonal(self.value_proj, gain)
+
+    def forward(self, z_state, past_predictions):
+        """
+        Forward pass with temporal attention.
+
+        z_state: Current state (B, feature_dim)
+        past_predictions: Past state predictions (B, T, feature_dim)
+        """
+        # Compute attention scores
+        query = self.query_proj(z_state).unsqueeze(1)  # (B, 1, out_features)
+        keys = self.key_proj(past_predictions)  # (B, T, out_features)
+        values = self.value_proj(past_predictions)  # (B, T, out_features)
+
+        # Attention weights: softmax over dot-product of query and keys
+        attention_scores = torch.bmm(query, keys.transpose(1, 2))  # (B, 1, T)
+        attention_weights = F.softmax(attention_scores, dim=-1)  # (B, 1, T)
+
+        # Compute context vector as weighted sum of values
+        context_vector = torch.bmm(attention_weights, values).squeeze(1)  # (B, out_features)
+
+        return context_vector
 
 
 def init_custom(layer, weight_tensor):

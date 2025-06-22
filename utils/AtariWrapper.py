@@ -1,15 +1,17 @@
-import gym
+import gymnasium as gym
 import numpy
 from PIL import Image
+import ale_py
 
+gym.register_envs(ale_py)
 
 class NopOpsEnv(gym.Wrapper):
     def __init__(self, env=None, max_count=30):
         super(NopOpsEnv, self).__init__(env)
         self.max_count = max_count
 
-    def reset(self):
-        self.env.reset()
+    def reset(self, **kwargs):
+        self.ereset(**kwargs)
 
         noops = numpy.random.randint(1, self.max_count + 1)
 
@@ -17,7 +19,7 @@ class NopOpsEnv(gym.Wrapper):
             obs, _, done, _, _ = self.env.step(0)
 
             if done:
-                self.env.reset()
+                self.ereset(**kwargs)
                 obs, _, _, _, _ = self.env.step(1)
                 obs, _, _, _, _ = self.env.step(2)
 
@@ -79,16 +81,16 @@ class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
         gym.Wrapper.__init__(self, env)
 
-    def reset(self):
-        self.env.reset()
+    def reset(self, **kwargs):
+        self.env.reset(**kwargs)
 
         obs, _, done, _, _ = self.env.step(1)
         if done:
-            self.env.reset()
+            self.env.reset(**kwargs)
 
         obs, _, done, _, _ = self.env.step(2)
         if done:
-            self.env.reset()
+            self.env.reset(**kwargs)
 
         return obs
 
@@ -163,9 +165,9 @@ class StickyActionEnv(gym.Wrapper):
         self.last_action = action
         return self.env.step(action)
 
-    def reset(self):
+    def reset(self, **kwargs):
         self.last_action = 0
-        return self.env.reset()
+        return self.env.reset(**kwargs)
 
 
 class RepeatActionEnv(gym.Wrapper):
@@ -227,9 +229,9 @@ class RawScoreEnv(gym.Wrapper):
 
         return obs, reward, done, trunc, info
 
-    def reset(self):
+    def reset(self, **kwargs):
         self.steps = 0
-        return self.env.reset()
+        return self.env.reset(**kwargs)
 
 
 def WrapperAtari(env, height=96, width=96, frame_stacking=4, frame_skipping=4, reward_scale=1.0, dense_rewards=1.0):
