@@ -6,8 +6,8 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.FMLoss import STDIMLoss, IJEPALoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMNetwork, PPOAtariIJEPANetwork
+from loss.FMLoss import STDIMLoss, IJEPALoss, IJEPAHiddenHeadLoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMNetwork, PPOAtariIJEPANetwork, PPOAtariIJEPAHiddenHeadNetwork
 from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
@@ -17,6 +17,7 @@ from modules.forward_models.ForwardModel import ForwardModelType
 class ArchitectureType(Enum):
     ST_DIM = 0
     I_JEPA = 1
+    I_JEPA_HIDDEN_HEAD = 2
 
 
 class PPOAtariFMAgent(PPOAtariAgent):
@@ -54,9 +55,14 @@ class PPOAtariFMAgent(PPOAtariAgent):
                                    model_class.ppo_encoder.hidden_size,
                                    model_class.ppo_encoder.local_layer_depth,
                                    config.device)
-        else:
+        elif _type == ArchitectureType.I_JEPA:
             model_class = PPOAtariIJEPANetwork(config, forward_model_type).to(config.device)
             loss_class = IJEPALoss(model_class, config.device)
+        else:
+            model_class = PPOAtariIJEPAHiddenHeadNetwork(config, forward_model_type).to(config.device)
+            loss_class = IJEPAHiddenHeadLoss(model_class, config.device, total_steps=32_000_000, 
+                shrink_start_frac=0.5, shrink_max=1.0, w_align=1.0, w_h_varcov=1.0
+            )
 
         return model_class, loss_class
 

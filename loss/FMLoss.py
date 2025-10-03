@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn
+import math
 
 from modules.PPO_Modules import ActivationStage
 from analytic.ResultCollector import ResultCollector
@@ -164,3 +165,104 @@ class IJEPALoss(FMLoss):
         cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / d
 
         return cov_loss
+
+
+class IJEPAHiddenHeadLoss(FMLoss):
+    def __init__(self, model, device, total_steps,
+                 shrink_start_frac=0.5, shrink_max=1.0,
+                 w_align=1.0, w_h_varcov=1.0):
+        super().__init__()
+        self.model = model
+        self.device = device
+
+        # schedule + weights for hidden loss
+        self.total_steps = int(total_steps)
+        self.shrink_start_frac = float(shrink_start_frac)
+        self.shrink_max = float(shrink_max)
+        self.w_align = float(w_align)
+        self.w_h_varcov = float(w_h_varcov)
+
+        self.register_buffer("_update_idx", torch.zeros((), dtype=torch.long))
+
+    def __call__(self, states, actions, next_states):
+        map_state, map_next_state, p_next_state, h_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+
+        var_cov_loss = self._var_cov_loss(self, map_next_state)
+        forward_loss = super()._forward_loss(p_next_state, map_next_state)
+        inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
+        hidden_loss = self._hidden_loss(self, h_next_state, map_next_state)
+
+        total_loss = var_cov_loss + hidden_loss + forward_loss + inverse_loss
+
+        ResultCollector().update(
+            loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
+            norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
+            fwd_loss=forward_loss.unsqueeze(-1).detach().cpu(),
+            total_loss=total_loss.unsqueeze(-1).detach().cpu(),
+            acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
+            acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu()
+        )
+
+        self._update_idx += 1
+        return total_loss
+
+    @staticmethod
+    def _hidden_loss(self, h_next_state, map_next_state):
+        h_as_feat = self.model.proj_hidden_to_z(h_next_state)
+
+        align = self._cosine_align(h_as_feat, map_next_state)
+        spread = self._varcov(h_next_state)
+        w_shrink = self._shrink_weight(self)
+        shrink = (h_next_state ** 2).mean()
+
+        hidden_loss = self.w_align * align + self.w_h_varcov * spread + w_shrink * shrink
+        return hidden_loss
+
+    @staticmethod
+    def _var_cov_loss(self, z_state):
+        loss = self.variance(z_state) + self.covariance(z_state) * 1 / 25
+        return loss
+
+    @staticmethod
+    def variance(z, gamma=1):
+        return F.relu(gamma - z.std(0)).mean()
+
+    @staticmethod
+    def covariance(z):
+        n, d = z.shape
+        mu = z.mean(0)
+        cov = torch.matmul((z - mu).t(), z - mu) / max(n - 1, 1)
+        cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / max(d, 1)
+        return cov_loss
+    
+    @staticmethod
+    def _cosine_align(h, z_stopgrad):
+        h = F.normalize(h, dim=-1)
+        z = F.normalize(z_stopgrad.detach(), dim=-1)
+        return 2.0 - 2.0 * (h * z).sum(dim=-1).mean()
+
+    @staticmethod
+    def _varcov(x, gamma=1.0, eps=1e-4):
+        x = x - x.mean(0, keepdim=True)
+        std = torch.sqrt(x.var(0) + eps)
+        var_loss = F.relu(gamma - std).mean()
+
+        n, d = x.shape
+        if n <= 1:
+            cov_loss = torch.zeros((), device=x.device)
+        else:
+            cov = (x.t() @ x) / (n - 1)
+            off = cov.flatten()[:-1].view(d - 1, d + 1)[:, 1:].flatten()
+            cov_loss = (off ** 2).mean()
+        return var_loss + cov_loss
+
+    @staticmethod
+    def _shrink_weight(self):
+        step = int(self._update_idx.item())
+        t = step / max(1.0, float(self.total_steps))
+        if t <= self.shrink_start_frac:
+            return 0.0
+        if t >= 1.0:
+            return float(self.shrink_max)
+        u = (t - self.shrink_start_frac) / (1.0 - self.shrink_start_frac)
+        return float(self.shrink_max * 0.5 * (1.0 - math.cos(math.pi * u)))
