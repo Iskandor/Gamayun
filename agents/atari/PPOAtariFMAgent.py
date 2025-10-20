@@ -57,7 +57,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
                                    config.device)
         elif _type == ArchitectureType.I_JEPA:
             model_class = PPOAtariIJEPANetwork(config, forward_model_type).to(config.device)
-            loss_class = IJEPALoss(model_class, config.device)
+            loss_class = IJEPALoss(model_class, config.device, config.delta)
         else:
             model_class = PPOAtariIJEPAHiddenHeadNetwork(config, forward_model_type).to(config.device)
             loss_class = IJEPAHiddenHeadLoss(model_class, config.device, total_steps=32_000_000, 

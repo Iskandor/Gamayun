@@ -113,11 +113,12 @@ class STDIMLoss(FMLoss):
 
 # ST-DIM specific loss + general one
 class IJEPALoss(FMLoss):
-    def __init__(self, model, device):
+    def __init__(self, model, device, delta):
         super(IJEPALoss, self).__init__()
 
         self.model = model
         self.device = device
+        self.delta = delta
 
     def __call__(self, states, actions, next_states):
         # Probably need to change the output of AtariLargeEncoder as we don't need f maps
@@ -128,7 +129,7 @@ class IJEPALoss(FMLoss):
         forward_loss = super()._forward_loss(p_next_state, map_next_state)
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
 
-        total_loss = var_cov_loss + hidden_loss + forward_loss + inverse_loss
+        total_loss = var_cov_loss + hidden_loss * self.delta + forward_loss + inverse_loss
 
         ResultCollector().update(loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
                                  norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
