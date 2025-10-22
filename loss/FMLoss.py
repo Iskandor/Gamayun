@@ -267,3 +267,49 @@ class IJEPAHiddenHeadLoss(FMLoss):
             return float(self.shrink_max)
         u = (t - self.shrink_start_frac) / (1.0 - self.shrink_start_frac)
         return float(self.shrink_max * 0.5 * (1.0 - math.cos(math.pi * u)))
+    
+
+# LOSS for our experimental architecture with additional hidden forward model
+class IJEPAEmaEncoderLoss(FMLoss):
+    def __init__(self, model, device):
+        super(IJEPAEmaEncoderLoss, self).__init__()
+
+        self.model = model
+        self.device = device
+
+    def __call__(self, states, actions, next_states):
+        map_state, map_next_state, p_next_state, h_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+
+        var_cov_loss = self._var_cov_loss(self, map_next_state)
+        hidden_loss = super()._forward_loss(p_next_state, h_next_state)
+        forward_loss = super()._forward_loss(p_next_state, map_next_state)
+        inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
+
+        total_loss = var_cov_loss + hidden_loss + forward_loss + inverse_loss
+
+        ResultCollector().update(loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
+                                 norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
+                                 fwd_loss=forward_loss.unsqueeze(-1).detach().cpu(),
+                                 total_loss=total_loss.unsqueeze(-1).detach().cpu(),
+                                 acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
+                                 acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu())
+
+        return total_loss
+
+    @staticmethod
+    def _var_cov_loss(self, z_state):
+        loss = self.variance(z_state) + self.covariance(z_state) * 1 / 25
+        return loss
+
+    @staticmethod
+    def variance(z, gamma=1):
+        return F.relu(gamma - z.std(0)).mean()
+
+    @staticmethod
+    def covariance(z):
+        n, d = z.shape
+        mu = z.mean(0)
+        cov = torch.matmul((z - mu).t(), z - mu) / (n - 1)
+        cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / d
+
+        return cov_loss
