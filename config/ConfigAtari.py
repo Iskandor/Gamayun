@@ -537,6 +537,34 @@ class ConfigMontezumaFMIJEPA_32(ConfigAtari):
         agent.training_loop(self.env, name, trial)
 
 
+class ConfigMontezumaFMIJEPA_64_No_Skip_delta_0_01(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=64,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_ijepa'
+        self.hidden_dim = self.feature_dim // 4
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
 class ConfigMontezumaFMIJEPA_No_Skip_Hidden_Model_Delta_0_1(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
