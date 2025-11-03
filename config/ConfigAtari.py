@@ -651,7 +651,7 @@ class ConfigMontezumaFMIJEPA_Skip_Hidden_Model_Delta_0_01(ConfigAtari):
         agent.training_loop(self.env, name, trial)
 
 
-class ConfigMontezumaFMIJEPA_Ema_Encoder(ConfigAtari):
+class ConfigMontezumaFMIJEPA_Ema_Encoder_delta_100(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
                          steps=32,
@@ -665,6 +665,7 @@ class ConfigMontezumaFMIJEPA_Ema_Encoder(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.eta = 0.01
+        self.delta = 100
         self.type = 'st-dim_ijepa'
         self.forward_model_dim = 4096
         self.hidden_dim = self.feature_dim
@@ -674,9 +675,36 @@ class ConfigMontezumaFMIJEPA_Ema_Encoder(ConfigAtari):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(f"Starting training: {name}")
 
-        agent = PPOAtariFMIJEPAAgent(self)
+        agent = PPOAtariFMIJEPAAgent(self, type=0)
         agent.training_loop(self.env, name, trial)
 
+
+class ConfigMontezumaFMIJEPA_HiddenModelPrediticion(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 1.0
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMIJEPAAgent(self, type=1)
+        agent.training_loop(self.env, name, trial)
 
 
 class ConfigMontezumaSEER(ConfigAtari):

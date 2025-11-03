@@ -271,11 +271,12 @@ class IJEPAHiddenHeadLoss(FMLoss):
 
 # LOSS for our experimental architecture with additional hidden forward model
 class IJEPAEmaEncoderLoss(FMLoss):
-    def __init__(self, model, device):
+    def __init__(self, model, device, delta=1):
         super(IJEPAEmaEncoderLoss, self).__init__()
 
         self.model = model
         self.device = device
+        self.delta = delta
 
     def __call__(self, states, actions, next_states):
         map_state, map_next_state, p_next_state, h_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
@@ -285,7 +286,7 @@ class IJEPAEmaEncoderLoss(FMLoss):
         forward_loss = super()._forward_loss(p_next_state, map_next_state)
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
 
-        total_loss = var_cov_loss + hidden_loss + forward_loss + inverse_loss
+        total_loss = var_cov_loss + hidden_loss*self.delta + forward_loss + inverse_loss
 
         ResultCollector().update(loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
                                  norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
