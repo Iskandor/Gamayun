@@ -665,7 +665,7 @@ class ConfigMontezumaFMIJEPA_Ema_Encoder_delta_100(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.eta = 0.01
-        self.delta = 100
+        self.delta = 1000
         self.type = 'st-dim_ijepa'
         self.forward_model_dim = 4096
         self.hidden_dim = self.feature_dim
