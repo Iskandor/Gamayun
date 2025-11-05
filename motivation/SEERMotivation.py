@@ -37,11 +37,8 @@ class SEERMotivation:
 
         return distillation_error, forward_error
 
-    def reward(self, z_state, p_state, z_next_state, h_next_state, p_next_state):
+    def reward(self, z_state, p_state, z_next_state, p_next_state):
         distillation_error, forward_error = self._error(z_state, p_state, z_next_state, p_next_state)
+        reward = distillation_error * self._distillation_scale + forward_error * self._forward_scale
 
-        confidence = torch.norm(h_next_state, p=2, dim=1, keepdim=True) <= self._forward_threshold
-
-        reward = distillation_error * self._distillation_scale + forward_error * self._forward_scale * confidence
-
-        return reward.clip(0., 1.), distillation_error, forward_error, confidence.int()
+        return reward.clip(0., 1.), distillation_error, forward_error

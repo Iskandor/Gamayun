@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_msssim import ssim
-from torch_topological.nn import VietorisRipsComplex, SignatureLoss
 
 from analytic.ResultCollector import ResultCollector
 from loss.VICRegLoss import VICRegLoss
@@ -16,8 +15,6 @@ class SNDv3Loss(nn.Module):
         self.model = model
 
         self.vicreg_loss = VICRegLoss()
-        self.vr = VietorisRipsComplex(dim=1)
-        self.topo_loss = SignatureLoss(p=2, dimensions=1)
 
     def __call__(self, states):
         zt_state, pz_state = self.model(states, stage=ActivationStage.MOTIVATION_TRAINING)

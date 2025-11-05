@@ -4,23 +4,15 @@ import os
 import numpy as np
 import torch
 
-from plots.paths import data_root
-
-
 def prepare_data(keys):
     data = []
 
     for key in keys:
-        model = key['model']
-        algorithm = key['algorithm']
-        env = key['env']
-        id = key['id']
-
         mode = 'mp'
         if 'mode' in key:
             mode = key['mode']
 
-        path = os.path.join(data_root, algorithm, model, env, id)
+        path = key['path']
         if mode == 'legacy':
             data.append(convert_data(load_data2(path)))
         elif mode == 'mp':

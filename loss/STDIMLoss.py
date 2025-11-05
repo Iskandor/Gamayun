@@ -4,11 +4,11 @@ import torch.nn.functional as F
 
 
 class STDIMLoss(nn.Module):
-    def __init__(self, projection1, projection2, device):
+    def __init__(self, feature_size, local_layer_depth, device):
         super(STDIMLoss, self).__init__()
 
-        self.projection1 = projection1
-        self.projection2 = projection2
+        self.projection1 = torch.nn.Linear(feature_size, local_layer_depth).to(device)
+        self.projection2 = torch.nn.Linear(local_layer_depth, local_layer_depth).to(device)
         self.device = device
 
     def __call__(self, z_next_state, map_state, map_next_state):

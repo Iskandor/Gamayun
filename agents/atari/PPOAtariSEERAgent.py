@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 
 from agents.PPOAgent import AgentMode
@@ -7,19 +8,19 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.SEERLoss import SEERLoss, SEERLossV8, SEERLoss_V5M14
+from loss.SEERLoss import SEERLoss_V1
 from modules.PPO_Modules import ActivationStage
-from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER_V8, PPOAtariNetworkSEER_V9, PPOAtariNetworkSEER_V5M4, PPOAtariNetworkSEER_V5M13, PPOAtariNetworkSEER_V5M14
+from modules.atari.PPOAtariNetworkSEER import PPOAtariNetworkSEER_V1
 from motivation.SEERMotivation import SEERMotivation
 from utils.StateNorm import ExponentialDecayNorm
 
 
-class PPOAtariSEERAgent(PPOAtariAgent):
+class PPOAtariSEERAgent_V1(PPOAtariAgent):
     def __init__(self, config):
         super().__init__(config)
-        self.model = PPOAtariNetworkSEER_V5M4(config).to(config.device)
+        self.model = PPOAtariNetworkSEER_V1(config).to(config.device)
         self.motivation = SEERMotivation(self.model,
-                                         SEERLoss(config, self.model),
+                                         SEERLoss_V1(config, self.model),
                                          config.motivation_lr,
                                          config.distillation_scale,
                                          config.forward_scale,
@@ -40,8 +41,6 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                              device=config.device,
                              motivation=True)
 
-        self.hidden_average = ExponentialDecayNorm(config.hidden_dim, config.device)
-
     def _initialize_info(self, trial):
         info_points = [
             ('re', ['sum', 'step'], 'ext. reward', 0),
@@ -50,12 +49,11 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             ('target_space', ['mean', 'std'], 'target space', 0),
             ('distillation_space', ['mean', 'std'], 'distillation space', 0),
             ('forward_space', ['mean', 'std'], 'forward space', 0),
-            # ('learned_space', ['mean', 'std'], 'learned space', 0),
             ('target_forward_space', ['mean', 'std'], 'target forward space', 0),
-            ('hidden_space', ['mean', 'std'], 'hidden space', 0),
             ('distillation_reward', ['mean', 'std'], 'dist. error', 0),
             ('forward_reward', ['mean', 'std'], 'forward error', 0),
-            ('confidence', ['mean', 'std'], 'confidence', 0),
+            ('forward_model_ia', ['mean', 'std'], 'forward model IA', 0),
+            ('forward_model_kl', ['mean', 'std'], 'forward model KL', 0)
         ]
         info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
 
@@ -69,13 +67,13 @@ class PPOAtariSEERAgent(PPOAtariAgent):
                       ri=(1,),
                       target_space=(1,),
                       distillation_space=(1,),
-                      # learned_space=(1,),
                       forward_space=(1,),
                       target_forward_space=(1,),
                       hidden_space=(1,),
                       distillation_reward=(1,),
                       forward_reward=(1,),
-                      confidence=(1,),
+                      forward_model_ia=(1,),
+                      forward_model_kl=(1,),
                       )
         return analysis
 
@@ -91,37 +89,35 @@ class PPOAtariSEERAgent(PPOAtariAgent):
             if mode == AgentMode.TRAINING:
                 self.state_average.update(next_state)
 
-            z_state, pz_state, z_next_state, pz_next_state, h_next_state = self.model(state, action, next_state, h_next_state=self.hidden_average.mean(), stage=ActivationStage.MOTIVATION_INFERENCE)
+            zt_state, pz_state, z_next_state, pz_next_state, next_probs, p_next_probs, p_action, pp_action = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
 
-            if mode == AgentMode.TRAINING:
-                self.hidden_average.update(h_next_state)
-
-            int_reward, distillation_error, forward_error, confidence = self.motivation.reward(z_state, pz_state, z_next_state, h_next_state, pz_next_state)
+            int_reward, distillation_error, forward_error = self.motivation.reward(zt_state, pz_state, z_next_state, pz_next_state)
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
         reward = torch.cat([ext_reward, int_reward.cpu()], dim=1)
         score = torch.tensor(info['raw_score']).unsqueeze(-1)
         done = torch.tensor(1 - done, dtype=torch.float32)
 
-        target_features = torch.norm(z_state, p=2, dim=1, keepdim=True)
+        target_features = torch.norm(zt_state, p=2, dim=1, keepdim=True)
         distillation_features = torch.norm(pz_state, p=2, dim=1, keepdim=True)
-        # learned_features = torch.norm(zl_state, p=2, dim=1, keepdim=True)
         forward_features = torch.norm(pz_next_state, p=2, dim=1, keepdim=True)
         target_forward_features = torch.norm(z_next_state, p=2, dim=1, keepdim=True)
-        hidden_features = torch.norm(h_next_state, p=2, dim=1, keepdim=True)
+
+        forward_model_ia = (torch.argmax(p_action, dim=1) == torch.argmax(pp_action, dim=1)).sum() / p_action.shape[0]
+        forward_model_kl = F.kl_div(torch.log(next_probs), p_next_probs, reduction='batchmean')
+
         self.analytics.update(
             re=ext_reward,
             ri=int_reward,
             score=score,
             target_space=target_features,
             distillation_space=distillation_features,
-            # learned_space=learned_features,
             forward_space=forward_features,
             target_forward_space=target_forward_features,
-            hidden_space=hidden_features,
             distillation_reward=distillation_error,
             forward_reward=forward_error,
-            confidence=confidence,
+            forward_model_ia=forward_model_ia,
+            forward_model_kl=forward_model_kl
         )
         self.analytics.end_step()
 
@@ -151,7 +147,6 @@ class PPOAtariSEERAgent(PPOAtariAgent):
         state = {
             'model_state': self.model.state_dict(),
             'state_average': self.state_average.get_state(),
-            'hidden_average': self.hidden_average.get_state(),
         }
         torch.save(state, path + '.pth')
 
@@ -160,7 +155,6 @@ class PPOAtariSEERAgent(PPOAtariAgent):
 
         self.model.load_state_dict(state['model_state'])
         self.state_average.set_state(state['state_average'])
-        self.hidden_average.set_state(state['hidden_average'])
 
     def analytic_loop(self, env, name, task):
         if task == 'collect_states':

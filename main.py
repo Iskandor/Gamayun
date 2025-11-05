@@ -4,27 +4,9 @@ import os
 import platform
 
 import psutil
-import ray
 import torch
 
 from experiment.ExperimentServer import ExperimentServer
-
-
-def run_ray_parallel(args, experiment):
-    @ray.remote(num_gpus=1 / args.num_processes, max_calls=1)
-    def run_thread_ray(p_thread_params):
-        # run_thread(p_thread_params)
-        pass
-
-    for i in range(math.ceil(experiment.trials / args.num_processes)):
-        thread_params = []
-        for j in range(args.num_processes):
-            index = i * args.num_processes + j
-            if index < experiment.trials:
-                thread_params.append((args.ppo, args.env, experiment, index))
-
-        ray.get([run_thread_ray.remote(tp) for tp in thread_params])
-
 
 if __name__ == '__main__':
     print(platform.system())

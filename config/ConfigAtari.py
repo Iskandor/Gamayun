@@ -7,7 +7,7 @@ from agents.atari.PPOAtariFMAgent import PPOAtariFMAgent, ArchitectureType
 from agents.atari.PPOAtariFMIJEPAAgent import PPOAtariFMIJEPAAgent
 from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
 from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
-from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent
+from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent_V1
 from agents.atari.PPOAtariSNDAgent import PPOAtariSNDAgent
 from agents.atari.PPOAtariSNDv2Agent import PPOAtariSNDv2Agent
 from agents.atari.PPOAtariSNDv3Agent import PPOAtariSNDv3Agent
@@ -710,20 +710,18 @@ class ConfigMontezumaFMIJEPA_HiddenModelPrediticion(ConfigAtari):
 class ConfigMontezumaSEER(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         # render_mode='rgb_array'
-        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4', steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99], num_threads=num_threads, device=device, shift=shift,
                          path=path)
 
         self.learned_projection_dim = self.feature_dim
         self.forward_model_dim = self.feature_dim * 8
-        self.hidden_dim = self.feature_dim // 4
-        # self.hidden_dim = self.feature_dim // 2
         # self.ppo_feature_dim = self.feature_dim * 4
 
         self.motivation_lr = 1e-4
         self.distillation_scale = 0.25
         self.forward_scale = 0.025
         self.forward_threshold = 1
-        self.type = 'asym_v5m4f1'
+        self.type = 'v1'
 
         self.delta = 0.5
         # self.beta = 0.25
@@ -736,14 +734,14 @@ class ConfigMontezumaSEER(ConfigAtari):
         trial += self.shift
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
 
-        agent = PPOAtariSEERAgent(self)
+        agent = PPOAtariSEERAgent_V1(self)
         agent.training_loop(self.env, name, trial)
 
     def inference(self, trial):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(name)
 
-        agent = PPOAtariSEERAgent(self)
+        agent = PPOAtariSEERAgent_V1(self)
         if len(self.path) > 0:
             agent.load(self.path)
         agent.inference_loop(self.env, name, trial)
@@ -752,7 +750,7 @@ class ConfigMontezumaSEER(ConfigAtari):
         name = '{0:s}_{1:s}'.format(self.__class__.__name__, self.type)
         print(name)
 
-        agent = PPOAtariSEERAgent(self)
+        agent = PPOAtariSEERAgent_V1(self)
         if len(self.path) > 0:
             agent.load(self.path)
         agent.analytic_loop(self.env, name, task)
