@@ -4,6 +4,7 @@ from agents.atari.PPOAtariA2Agent import PPOAtariA2Agent
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from agents.atari.PPOAtariDPMAgent import PPOAtariDPMAgent
 from agents.atari.PPOAtariFMAgent import PPOAtariFMAgent, ArchitectureType
+from agents.atari.PPOAtariFMLinearAgent import PPOAtariFMLinearAgent
 from agents.atari.PPOAtariFMIJEPAAgent import PPOAtariFMIJEPAAgent
 from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
 from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
@@ -480,6 +481,110 @@ class ConfigMontezumaFMSTDIM_128_feature_dim_4096_skip_connection(ConfigAtari):
         print(f"Starting training: {name}")
 
         agent = PPOAtariFMAgent(self, _type = ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMLinearSTDIM_32_feature_dim_1024(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelLinearResidual)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMLinearSTDIM_32_feature_dim_1024_WithActionProjection(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelLinearResidual, type=1)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMLinearSTDIM_32_feature_dim_1024_SKIP(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=1)
         agent.training_loop(self.env, name, trial)
 
 

@@ -4,7 +4,7 @@ from collections import deque
 from functools import reduce
 
 import numpy as np
-import gym
+import gymnasium as gym
 from gym import error, spaces, utils
 from gym_minigrid.minigrid import OBJECT_TO_IDX, COLOR_TO_IDX, STATE_TO_IDX
 
