@@ -1,7 +1,7 @@
 import time
 
 import torch
-from gym.wrappers.monitoring.video_recorder import VideoRecorder
+import gymnasium as gym
 
 from agents.PPOAgent import PPOAgentBase, AgentMode
 from algorithms.PPO import PPO
@@ -99,7 +99,7 @@ class PPOAtariAgent(PPOAgentBase):
 
     def inference_loop(self, env, name, trial):
         video_path = name + '.mp4'
-        video_recorder = VideoRecorder(env.envs_list[0], video_path, enabled=video_path is not None)
+        video_recorder = gym.wrappers.RecordVideo(env.envs_list[0], video_path, enabled=video_path is not None)
 
         self.info = self._initialize_info(trial)
         self.analytics = self._initialize_analysis()

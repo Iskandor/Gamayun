@@ -1,36 +1,33 @@
 import torch
 
-from enum import Enum
 from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.FMLoss import STDIMLoss, IJEPALoss, IJEPAHiddenHeadLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMNetwork, PPOAtariIJEPANetwork, PPOAtariIJEPAHiddenHeadNetwork
-from motivation.FMMotivation import FMMotivation
-from utils.StateNorm import ExponentialDecayNorm
+from loss.FMLoss import IJEPAEmaEncoderLoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariIJEPAEmaEncoderNetwork, PPOAtariIJEPANetwork2
+from motivation.FMMotivation import FMIJEPAMotivation, FMIJEPAMotivation2
 from modules.PPO_Modules import ActivationStage
-from modules.forward_models.ForwardModel import ForwardModelType
-from modules.forward_models.HiddenModel import HiddenModelType
 
 
-class ArchitectureType(Enum):
-    ST_DIM = 0
-    I_JEPA = 1
-    I_JEPA_HIDDEN_HEAD = 2
-
-
-class PPOAtariFMAgent(PPOAtariAgent):
-    def __init__(self, config, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection, hidden_model_type=HiddenModelType.HiddenModel):
+class PPOAtariFMIJEPAAgent(PPOAtariAgent):
+    def __init__(self, config, type=0):
         super().__init__(config)
-        model_class, loss_class = self._set_up(config, _type, forward_model_type, hidden_model_type)
+        model_class, loss_class = self._set_up(config, type)
         self.model = model_class
-        self.motivation = FMMotivation(self.model,
-                                       loss_class,
-                                       config.motivation_lr,
-                                       config.eta,
-                                       config.device)
+        if type == 0:
+            self.motivation = FMIJEPAMotivation(self.model,
+                                        loss_class,
+                                        config.motivation_lr,
+                                        config.eta,
+                                        config.device)
+        else:
+            self.motivation = FMIJEPAMotivation2(self.model,
+                                        loss_class,
+                                        config.motivation_lr,
+                                        config.eta,
+                                        config.device)
         self.ppo = PPO(self.model,
                        config.lr,
                        config.actor_loss_weight,
@@ -49,22 +46,12 @@ class PPOAtariFMAgent(PPOAtariAgent):
         #self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     @staticmethod
-    def _set_up(config, _type, forward_model_type, hidden_model_type):
-        if _type == ArchitectureType.ST_DIM:
-            model_class = PPOAtariSTDIMNetwork(config, forward_model_type).to(config.device)
-            loss_class = STDIMLoss(model_class,
-                                   model_class.ppo_encoder.hidden_size,
-                                   model_class.ppo_encoder.local_layer_depth,
-                                   config.device)
-        elif _type == ArchitectureType.I_JEPA:
-            model_class = PPOAtariIJEPANetwork(config, forward_model_type, hidden_model_type).to(config.device)
-            loss_class = IJEPALoss(model_class, config.device, config.delta)
+    def _set_up(config, type):
+        if type == 0:
+            model_class = PPOAtariIJEPAEmaEncoderNetwork(config).to(config.device)
         else:
-            model_class = PPOAtariIJEPAHiddenHeadNetwork(config, forward_model_type, hidden_model_type).to(config.device)
-            loss_class = IJEPAHiddenHeadLoss(model_class, config.device, total_steps=32_000_000, 
-                shrink_start_frac=0.5, shrink_max=1.0, w_align=1.0, w_h_varcov=1.0
-            )
-
+            model_class = PPOAtariIJEPANetwork2(config).to(config.device)
+        loss_class = IJEPAEmaEncoderLoss(model_class, config.device, config.delta)
         return model_class, loss_class
 
     def _initialize_info(self, trial):
@@ -100,7 +87,6 @@ class PPOAtariFMAgent(PPOAtariAgent):
 
             next_state = self._encode_state(next_state)
             #next_state = self.state_average.process(next_state).clip_(-4., 4.)
-
             #if mode == AgentMode.TRAINING:
             #    self.state_average.update(next_state)
 

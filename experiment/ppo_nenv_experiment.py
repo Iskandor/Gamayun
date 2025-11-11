@@ -1,6 +1,6 @@
 import numpy
 import torch
-from gym.wrappers.monitoring.video_recorder import VideoRecorder
+import gymnasium as gym
 
 from analytic.ResultCollector import ResultCollector
 from utils.RunningAverage import RunningAverageWindow, StepCounter
@@ -34,7 +34,7 @@ class ExperimentNEnvPPO:
 
         for i in range(1):
             video_path = 'ppo_{0}_{1}_{2:d}.mp4'.format(config.name, config.model, i)
-            video_recorder = VideoRecorder(self._env, video_path)
+            video_recorder = gym.wrappers.RecordVideo(self._env, video_path)
             state0 = torch.tensor(self._env.reset(), dtype=torch.float32).unsqueeze(0).to(config.device)
             done = False
 

@@ -4,6 +4,7 @@ from agents.atari.PPOAtariA2Agent import PPOAtariA2Agent
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from agents.atari.PPOAtariDPMAgent import PPOAtariDPMAgent
 from agents.atari.PPOAtariFMAgent import PPOAtariFMAgent, ArchitectureType
+from agents.atari.PPOAtariFMIJEPAAgent import PPOAtariFMIJEPAAgent
 from agents.atari.PPOAtariICMAgent import PPOAtariICMAgent
 from agents.atari.PPOAtariRNDAgent import PPOAtariRNDAgent
 from agents.atari.PPOAtariSEERAgent import PPOAtariSEERAgent_V1
@@ -12,6 +13,7 @@ from agents.atari.PPOAtariSNDv2Agent import PPOAtariSNDv2Agent
 from agents.atari.PPOAtariSNDv3Agent import PPOAtariSNDv3Agent
 from agents.atari.PPOAtariSNDv4Agent import PPOAtariSNDv4Agent
 from modules.forward_models.ForwardModel import ForwardModelType
+from modules.forward_models.HiddenModel import HiddenModelType
 from config.ConfigBase import ConfigPPO
 from utils.AtariWrapper import WrapperHardAtari
 from utils.MultiEnvWrapper import MultiEnvParallel
@@ -522,6 +524,7 @@ class ConfigMontezumaFMIJEPA_32(ConfigAtari):
 
         self.motivation_lr = 1e-4
         self.eta = 0.01
+        self.delta = 0.01
         self.type = 'st-dim_ijepa'
         self.hidden_dim = self.feature_dim // 4
 
@@ -530,7 +533,177 @@ class ConfigMontezumaFMIJEPA_32(ConfigAtari):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(f"Starting training: {name}")
 
-        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA)
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_64_No_Skip_delta_0_01(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=64,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_ijepa'
+        self.hidden_dim = self.feature_dim // 4
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_No_Skip_Hidden_Model_Delta_0_1(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 0.1
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim // 4
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_Skip_Hidden_Model_Delta_0_1(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 0.1
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim // 4
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection, 
+                                hidden_model_type=HiddenModelType.HiddenModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_Skip_Hidden_Model_Delta_0_01(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 0.01
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim // 4
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMAgent(self, _type = ArchitectureType.I_JEPA, forward_model_type=ForwardModelType.ForwardModelSkipConnection, 
+                                hidden_model_type=HiddenModelType.HiddenModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_Ema_Encoder_delta_100(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 1000
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMIJEPAAgent(self, type=0)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMIJEPA_HiddenModelPrediticion(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.delta = 1.0
+        self.type = 'st-dim_ijepa'
+        self.forward_model_dim = 4096
+        self.hidden_dim = self.feature_dim
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMIJEPAAgent(self, type=1)
         agent.training_loop(self.env, name, trial)
 
 
