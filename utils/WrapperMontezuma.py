@@ -1,7 +1,7 @@
 import numpy
 from PIL import Image
 import cv2
-import gym
+import gymnasium as gym
 
 
 class VideoRecorder(gym.Wrapper):

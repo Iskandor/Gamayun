@@ -4,7 +4,7 @@ import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import numpy
-import gym
+import gymnasium as gym
 import torch
 
 

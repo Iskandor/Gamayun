@@ -4,7 +4,7 @@ gymnasium[atari]
 crafter
 imageio
 matplotlib
-numpy
+numpy~=1.24.4
 opencv-python
 pyclustering
 scikit-learn
@@ -17,3 +17,5 @@ scipy
 pyyaml
 giotto-tda
 kaleido
+psutil
+pytorch_msssim
