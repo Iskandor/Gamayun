@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-import gym
+import gymnasium as gym
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader

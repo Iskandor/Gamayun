@@ -9,6 +9,7 @@ class ForwardModelType(Enum):
     ForwardModelSkipConnectionTwice = 2
     ForwardModelSkipConnectionPyramidScheme = 3
     ForwardModelSkipConnectionBatchNorm = 4
+    ForwardModelLinearResidual = 5
 
 def chooseModel(config, forward_model_type):
     forward_model = None
@@ -22,6 +23,8 @@ def chooseModel(config, forward_model_type):
         forward_model = ForwardModelSkipConnectionPyramidScheme(config)
     elif forward_model_type == ForwardModelType.ForwardModelSkipConnectionBatchNorm:
         forward_model = ForwardModelSkipConnectionBatchNorm(config)
+    elif forward_model_type == ForwardModelType.ForwardModelLinearResidual:
+        forward_model = ForwardModelLinearResidual(config)
     else:
         forward_model = ForwardModel(config)
 
@@ -243,3 +246,25 @@ class ForwardModelSkipConnectionDupe(nn.Module):
         x = self.forward_model[3](x)
         x = self.forward_model[4](x)  # Third Linear Layer
         return x
+    
+
+class ForwardModelLinearResidual(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.action_dim = config.action_dim
+        self.feature_dim = config.feature_dim
+        self.forward_model_dim = config.forward_model_dim
+
+        self.forward_model = nn.Sequential(
+            nn.Linear(self.feature_dim + self.action_dim, self.forward_model_dim),
+            nn.ReLU(),
+            nn.Linear(self.forward_model_dim, self.feature_dim)
+        )
+
+        gain = np.sqrt(2)
+        init_orthogonal(self.forward_model[0], gain)
+        init_orthogonal(self.forward_model[2], gain)
+
+    def forward(self, x):
+        return self.forward_model(x)
+    
