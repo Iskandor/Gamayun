@@ -5,8 +5,8 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.FMLoss import STDIMLoss, STDIMLinearLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNetwork, PPOAtariSTDIMLinearNetworkWithActionProjection
+from loss.FMLoss import STDIMLinearLoss, STDIMLoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNetwork, PPOAtariSTDIMLinearNetworkWithActionProjection, PPOAtariSTDIMLinearNetworkWithActionProjection2, PPOAtariSTDIMLinearNoiseNetwork
 from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
@@ -18,13 +18,31 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
         
         if type == 0:
             self.model = PPOAtariSTDIMLinearNetwork(config, forward_model_type).to(config.device)
-        else:
+            self.loss = STDIMLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+        elif type == 1:
             self.model = PPOAtariSTDIMLinearNetworkWithActionProjection(config, forward_model_type).to(config.device)
+            self.loss = STDIMLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+        elif type == 2:
+            self.model = PPOAtariSTDIMLinearNetworkWithActionProjection2(config, forward_model_type).to(config.device)
+            self.loss = STDIMLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+        else:
+            self.model = PPOAtariSTDIMLinearNoiseNetwork(config, forward_model_type).to(config.device)
+            self.loss = STDIMLinearLoss(self.model,
+                                        self.model.ppo_encoder.hidden_size,
+                                        self.model.ppo_encoder.local_layer_depth,
+                                        config.device)
+
         self.motivation = FMMotivation(self.model,
-                                       STDIMLinearLoss(self.model,
-                                                 self.model.ppo_encoder.hidden_size,
-                                                 self.model.ppo_encoder.local_layer_depth,
-                                                 config.device),
+                                       self.loss,
                                        config.motivation_lr,
                                        config.eta,
                                        config.device)
@@ -55,6 +73,7 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
             ('loss', ['mean', 'std', 'max'], 'loss', 0),
             ('norm_loss', ['mean', 'std', 'max'], 'norm_loss', 0),
             ('fwd_loss', ['mean', 'std', 'max'], 'fwd_loss', 0),
+            ('noise_loss', ['mean', 'std', 'max'], 'noise_loss', 0),
             ('total_loss', ['mean', 'std', 'max'], 'total_loss', 0),
             ('acc_encoder', ['mean', 'std', 'max'], 'acc_encoder', 0),
             ('acc_forward_model', ['mean', 'std', 'max'], 'acc_forward_model', 0)
@@ -66,8 +85,8 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
     def _initialize_analysis(self):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), 
-                      error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,), 
-                      acc_encoder=(1,), acc_forward_model=(1,))
+                      error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), noise_loss=(1,), 
+                      total_loss=(1,), acc_encoder=(1,), acc_forward_model=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):

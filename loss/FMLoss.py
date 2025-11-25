@@ -112,16 +112,17 @@ class STDIMLoss(FMLoss):
 
 
 class STDIMLinearLoss(FMLoss):
-    def __init__(self, model, feature_size, local_layer_depth, device):
+    def __init__(self, model, feature_size, local_layer_depth, device, noise_coef=0.1):
         super(STDIMLinearLoss, self).__init__()
 
         self.model = model
         self.projection1 = torch.nn.Linear(feature_size, local_layer_depth).to(device)
         self.projection2 = torch.nn.Linear(local_layer_depth, local_layer_depth).to(device)
         self.device = device
+        self.noise_coef = noise_coef 
 
     def __call__(self, states, actions, next_states):
-        map_state, map_next_state, p_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+        map_state, map_next_state, p_next_state, action_encoder, action_forward_model, noise = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
@@ -135,11 +136,13 @@ class STDIMLinearLoss(FMLoss):
         
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
         fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
-        total_loss = loss + norm_loss + fwd_loss + inverse_loss
+        noise_loss = torch.mean(torch.norm(noise, p=2, dim=1))
+        total_loss = loss + norm_loss + fwd_loss + inverse_loss + self.noise_coef * noise_loss
 
         ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
                                  norm_loss=norm_loss.unsqueeze(-1).detach().cpu(),
                                  fwd_loss=fwd_loss.unsqueeze(-1).detach().cpu(),
+                                 noise_loss=noise_loss.unsqueeze(-1).detach().cpu(),
                                  total_loss=total_loss.unsqueeze(-1).detach().cpu(),
                                  acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
                                  acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu())
