@@ -112,7 +112,7 @@ class STDIMLoss(FMLoss):
 
 
 class STDIMLinearLoss(FMLoss):
-    def __init__(self, model, feature_size, local_layer_depth, device, noise_coef=0.1):
+    def __init__(self, model, feature_size, local_layer_depth, device, noise_coef=0.001):
         super(STDIMLinearLoss, self).__init__()
 
         self.model = model
@@ -136,7 +136,7 @@ class STDIMLinearLoss(FMLoss):
         
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
         fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
-        noise_loss = torch.mean(torch.norm(noise, p=2, dim=1))
+        noise_loss = (noise.pow(2).sum(dim=1)).mean()
         total_loss = loss + norm_loss + fwd_loss + inverse_loss + self.noise_coef * noise_loss
 
         ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),

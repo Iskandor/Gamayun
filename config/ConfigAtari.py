@@ -533,7 +533,61 @@ class ConfigMontezumaFMLinearNoiseSTDIM_32_feature_dim_1024(ConfigAtari):
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(f"Starting training: {name}")
 
-        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelNoiseSkipConnection, type=3)
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelNoiseSkipConnection, type=10)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMLinearNoiseWithNoiseResidualSTDIM_32_feature_dim_1024(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.noise_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=4)
+        agent.training_loop(self.env, name, trial)
+
+
+class ConfigMontezumaFMLinearNoiseWithActionEmbeddingSTDIM_32_feature_dim_1024(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
+                         steps=32,
+                         lr=1e-4,
+                         n_env=128,
+                         gamma=[0.998, 0.99],
+                         num_threads=num_threads,
+                         device=device,
+                         shift=shift,
+                         path=path)
+
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.noise_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelLinearResidualWithoutAction, type=5)
         agent.training_loop(self.env, name, trial)
 
 
@@ -663,7 +717,7 @@ class ConfigMontezumaFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP
         name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
         print(f"Starting training: {name}")
 
-        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=1)
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=3)
         agent.training_loop(self.env, name, trial)
 
 

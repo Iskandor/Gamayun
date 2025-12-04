@@ -7,6 +7,7 @@ from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from loss.FMLoss import STDIMLinearLoss, STDIMLoss
 from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNetwork, PPOAtariSTDIMLinearNetworkWithActionProjection, PPOAtariSTDIMLinearNetworkWithActionProjection2, PPOAtariSTDIMLinearNoiseNetwork
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNetworkWithActionPopulationEmbeddingProjection, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual, PPOAtariSTDIMLinearNoiseNetworkWithActionEmbedding
 from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
@@ -34,12 +35,37 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
                                   self.model.ppo_encoder.hidden_size,
                                   self.model.ppo_encoder.local_layer_depth,
                                   config.device)
+        elif type == 3:
+            self.model = PPOAtariSTDIMLinearNetworkWithActionPopulationEmbeddingProjection(config, forward_model_type).to(config.device)
+            self.loss = STDIMLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+        elif type == 4:
+            self.model = PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(config, forward_model_type).to(config.device)
+            self.loss = STDIMLinearLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+        elif type == 5:
+            self.model = PPOAtariSTDIMLinearNoiseNetworkWithActionEmbedding(config, forward_model_type).to(config.device)
+            self.loss = STDIMLinearLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
         else:
             self.model = PPOAtariSTDIMLinearNoiseNetwork(config, forward_model_type).to(config.device)
             self.loss = STDIMLinearLoss(self.model,
                                         self.model.ppo_encoder.hidden_size,
                                         self.model.ppo_encoder.local_layer_depth,
                                         config.device)
+                                        
+            
+
+
+
+
+
 
         self.motivation = FMMotivation(self.model,
                                        self.loss,
