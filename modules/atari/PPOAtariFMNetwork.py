@@ -4,8 +4,8 @@ import numpy as np
 
 from modules import init_orthogonal
 from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
-from modules.encoders.EncoderAtari import AtariStateEncoderLarge
-from modules.forward_models import ForwardModel, HiddenModel
+from modules.encoders.EncoderAtari import AtariStateEncoderLarge, AtariStateEncoderLarge2
+from modules.forward_models import ForwardModel, HiddenModel, NoiseModel
 
 class PPOAtariFMNetwork(PPOMotivationNetwork):
     def __init__(self, config):
@@ -325,25 +325,22 @@ class PPOAtariSTDIMLinearNoiseNetwork(PPOAtariFMNetwork):
             return map_state, map_next_state, predicted_next_state, action_encoder, action_forward_model, noise
 
 
-
 class PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(PPOAtariFMNetwork):
-    def __init__(self, config, forward_model_type):
+    def __init__(self, config, forward_model_type, noise_generetor_type, encoder_type=1):
         super().__init__(config)
+        self.semanticLossOn = config.semanticLossOn
         self.action_dim = config.action_dim
         self.feature_dim = config.feature_dim
         self.input_shape = config.input_shape
         self.forward_model_dim = config.forward_model_dim
         self.noise_dim = config.noise_dim
 
-        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
+        if encoder_type == 1:
+            self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
+        else:
+            self.ppo_encoder = AtariStateEncoderLarge2(self.input_shape, self.feature_dim)
         self.forward_model = ForwardModel.chooseModel(config, forward_model_type)
-        
-        self.noise_generator = nn.Sequential(
-            nn.Linear(self.feature_dim + self.action_dim, self.noise_dim),
-            nn.ReLU(),
-            nn.Linear(self.noise_dim, self.feature_dim)
-        )
-        nn.init.uniform_(self.noise_generator[-1].weight, -0.01, 0.01)
+        self.noise_generator = NoiseModel.chooseModel(config, noise_generetor_type)
     
         self.inverse_model = nn.Sequential(
             nn.Linear(self.feature_dim * 2, self.feature_dim * 2),
@@ -381,8 +378,13 @@ class PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(PPOAtariFMNetwork):
             predicted_next_state_detached = predicted_next_state.detach()
             action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
             action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
-            return map_state, map_next_state, predicted_next_state, action_encoder, action_forward_model, noise
-        
+            _, probs_real = self.actor(map_next_state_detached)
+            if self.semanticLossOn:
+                _, probs_pred = self.actor(predicted_next_state)
+            else:
+                _, probs_pred = self.actor(predicted_next_state_detached)
+
+            return map_state, map_next_state, predicted_next_state, action_encoder, action_forward_model, noise, probs_real, probs_pred 
 
 
 class PPOAtariSTDIMLinearNoiseNetworkWithActionEmbedding(PPOAtariFMNetwork):
@@ -448,7 +450,6 @@ class PPOAtariSTDIMLinearNoiseNetworkWithActionEmbedding(PPOAtariFMNetwork):
             action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
             action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
             return map_state, map_next_state, predicted_next_state, action_encoder, action_forward_model, noise
-
 
 
 class PPOAtariIJEPANetwork(PPOAtariFMNetwork):

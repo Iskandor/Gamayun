@@ -29,6 +29,17 @@ class FMLoss(torch.nn.Module):
         inverse_loss = F.cross_entropy(action_encoder, actions)
         return inverse_loss, acc_encoder, acc_forward_model
 
+    # Vypočíta accuracy a KL Divergence loss medzi policy na realnom a predikovanom stave.
+    @staticmethod
+    def _policy_consistency_loss(probs_real, probs_pred):
+        act_real = probs_real.argmax(dim=1)
+        act_pred = probs_pred.argmax(dim=1)
+        acc_policy = (act_real == act_pred).float().mean()
+
+        log_probs_pred = torch.log(probs_pred.clamp(min=1e-8))
+        policy_loss = F.kl_div(log_probs_pred, probs_real, reduction='batchmean')
+        return policy_loss, acc_policy
+
 
 # ST-DIM specific loss + general one
 class STDIMLoss(FMLoss):
@@ -122,7 +133,92 @@ class STDIMLinearLoss(FMLoss):
         self.noise_coef = noise_coef 
 
     def __call__(self, states, actions, next_states):
-        map_state, map_next_state, p_next_state, action_encoder, action_forward_model, noise = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+        map_state, map_next_state, p_next_state, action_encoder, action_forward_model, noise, probs_real, probs_pred = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+
+        map_state_f5 = map_state['f5']
+        map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
+
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
+
+        loss = global_local_loss + local_local_loss
+        norm_loss = global_local_norm + local_local_norm
+        norm_loss *= 1e-4
+        
+        inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
+        _, acc_policy = super()._policy_consistency_loss(probs_real, probs_pred)
+        fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
+        noise_loss = (noise.pow(2).sum(dim=1)).mean()
+        total_loss = loss + norm_loss + fwd_loss + inverse_loss + self.noise_coef * noise_loss
+
+        ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
+                                 norm_loss=norm_loss.unsqueeze(-1).detach().cpu(),
+                                 fwd_loss=fwd_loss.unsqueeze(-1).detach().cpu(),
+                                 noise_loss=noise_loss.unsqueeze(-1).detach().cpu(),
+                                 total_loss=total_loss.unsqueeze(-1).detach().cpu(),
+                                 acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
+                                 acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu(),
+                                 acc_policy=acc_policy.unsqueeze(-1).detach().cpu())
+        
+        return total_loss
+
+    def global_local_loss(self, z_next_state, map_state):
+        # Loss 1: Global at time t, f5 patches at time t-1
+        N = z_next_state.size(0)
+        sy = map_state.size(1)
+        sx = map_state.size(2)
+        
+        positive = []
+        for y in range(sy):
+            for x in range(sx):
+                positive.append(map_state[:, y, x, :].T)
+
+        predictions = self.projection1(z_next_state)
+        positive = torch.stack(positive)
+        logits = torch.matmul(predictions, positive)
+        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
+
+        loss = F.cross_entropy(logits, target, reduction='mean')
+        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
+
+        return loss, norm_loss
+
+    def local_local_loss(self, map_state, map_next_state):
+        # Loss 2: f5 patches at time t, with f5 patches at time t-1
+        N = map_next_state.size(0)
+        sy = map_state.size(1)
+        sx = map_state.size(2)
+
+        predictions = []
+        positive = []
+        for y in range(sy):
+            for x in range(sx):
+                predictions.append(self.projection2(map_next_state[:, y, x, :]))
+                positive.append(map_state[:, y, x, :].T)
+
+        predictions = torch.stack(predictions)
+        positive = torch.stack(positive)
+        logits = torch.matmul(predictions, positive)
+        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
+
+        loss = F.cross_entropy(logits, target, reduction='mean')
+        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
+
+        return loss, norm_loss
+
+
+class STDIMLinearLossWithSemanticLoss(FMLoss):
+    def __init__(self, model, feature_size, local_layer_depth, device, noise_coef=0.001):
+        super(STDIMLinearLossWithSemanticLoss, self).__init__()
+
+        self.model = model
+        self.projection1 = torch.nn.Linear(feature_size, local_layer_depth).to(device)
+        self.projection2 = torch.nn.Linear(local_layer_depth, local_layer_depth).to(device)
+        self.device = device
+        self.noise_coef = noise_coef 
+
+    def __call__(self, states, actions, next_states):
+        map_state, map_next_state, p_next_state, action_encoder, action_forward_model, noise, probs_real, probs_pred = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
@@ -137,7 +233,8 @@ class STDIMLinearLoss(FMLoss):
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
         fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
         noise_loss = (noise.pow(2).sum(dim=1)).mean()
-        total_loss = loss + norm_loss + fwd_loss + inverse_loss + self.noise_coef * noise_loss
+        policy_loss, acc_policy = super()._policy_consistency_loss(probs_real, probs_pred)
+        total_loss = loss + norm_loss + fwd_loss + inverse_loss + policy_loss + self.noise_coef * noise_loss
 
         ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
                                  norm_loss=norm_loss.unsqueeze(-1).detach().cpu(),
@@ -145,7 +242,8 @@ class STDIMLinearLoss(FMLoss):
                                  noise_loss=noise_loss.unsqueeze(-1).detach().cpu(),
                                  total_loss=total_loss.unsqueeze(-1).detach().cpu(),
                                  acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
-                                 acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu())
+                                 acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu(),
+                                 acc_policy=acc_policy.unsqueeze(-1).detach().cpu())
         
         return total_loss
 

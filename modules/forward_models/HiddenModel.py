@@ -40,13 +40,7 @@ class HiddenModel(nn.Module):
         init_orthogonal(self.hidden_model[5], gain)
 
     def forward(self, x):
-        x = self.hidden_model[0](x)
-        x = self.hidden_model[1](x)  # First Linear Layer
-        x = self.hidden_model[2](x)  
-        x = self.hidden_model[3](x)  # Second Linear Layer
-        x = self.hidden_model[4](x)  
-        x = self.hidden_model[5](x)  # Third Linear Layer
-        return x
+        return self.hidden_model(x)
     
 
 class HiddenModelSkipConnection(nn.Module):

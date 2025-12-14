@@ -19,3 +19,4 @@ giotto-tda
 kaleido
 psutil
 pytorch_msssim
+statsmodels

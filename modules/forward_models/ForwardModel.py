@@ -331,7 +331,6 @@ class ForwardModelNoiseSkipConnection(nn.Module):
         return x
     
 
-
 class PopulationActionEmbedding(nn.Module):
     def __init__(self, num_actions, feature_dim, num_neurons = 32, sigma=0.2):
         super().__init__()
@@ -349,10 +348,10 @@ class PopulationActionEmbedding(nn.Module):
         if a_idx.dim() == 2:
             a_idx = a_idx.squeeze(-1)
 
-        a = a_idx.float() / (self.num_actions - 1 + 1e-8)   # [B]
-        a_expanded = a.unsqueeze(-1)           # [B,1]
-        centers = self.centers.unsqueeze(0)    # [1,K]
-        diff = a_expanded - centers            # [B,K]
+        a = a_idx.float() / (self.num_actions - 1 + 1e-8)
+        a_expanded = a.unsqueeze(-1)
+        centers = self.centers.unsqueeze(0)
+        diff = a_expanded - centers
 
         code = torch.exp(-0.5 * (diff / self.sigma) ** 2)
         code = code / (code.norm(p=2, dim=-1, keepdim=True) + 1e-8)

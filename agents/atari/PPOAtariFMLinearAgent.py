@@ -1,77 +1,51 @@
 import torch
+import os
 
 from agents.PPOAgent import AgentMode
 from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.FMLoss import STDIMLinearLoss, STDIMLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNetwork, PPOAtariSTDIMLinearNetworkWithActionProjection, PPOAtariSTDIMLinearNetworkWithActionProjection2, PPOAtariSTDIMLinearNoiseNetwork
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNetworkWithActionPopulationEmbeddingProjection, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual, PPOAtariSTDIMLinearNoiseNetworkWithActionEmbedding
-from motivation.FMMotivation import FMMotivation
+from utils.FeatureAnalyzer import FeatureAnalyzer
+from loss.FMLoss import STDIMLinearLoss, STDIMLinearLossWithSemanticLoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNoiseNetwork, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual
+from motivation.FMMotivation import FMMotivation, FMMotivationWithSemanticLoss
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
 from modules.forward_models.ForwardModel import ForwardModelType
+from modules.forward_models.NoiseModel import NoiseModelType
 
 class PPOAtariFMLinearAgent(PPOAtariAgent):
-    def __init__(self, config, forward_model_type=ForwardModelType.ForwardModelLinearResidual, type=0):
+    def __init__(self, config, forward_model_type=ForwardModelType.ForwardModelSkipConnection, noise_generator_type=NoiseModelType.NoiseModel, type=0, semanticLossOn=False, encoder_type=1):
         super().__init__(config)
+        config.semanticLossOn = semanticLossOn
         
-        if type == 0:
-            self.model = PPOAtariSTDIMLinearNetwork(config, forward_model_type).to(config.device)
-            self.loss = STDIMLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-        elif type == 1:
-            self.model = PPOAtariSTDIMLinearNetworkWithActionProjection(config, forward_model_type).to(config.device)
-            self.loss = STDIMLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-        elif type == 2:
-            self.model = PPOAtariSTDIMLinearNetworkWithActionProjection2(config, forward_model_type).to(config.device)
-            self.loss = STDIMLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-        elif type == 3:
-            self.model = PPOAtariSTDIMLinearNetworkWithActionPopulationEmbeddingProjection(config, forward_model_type).to(config.device)
-            self.loss = STDIMLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-        elif type == 4:
-            self.model = PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(config, forward_model_type).to(config.device)
-            self.loss = STDIMLinearLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-        elif type == 5:
-            self.model = PPOAtariSTDIMLinearNoiseNetworkWithActionEmbedding(config, forward_model_type).to(config.device)
-            self.loss = STDIMLinearLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
+        if type == 1:
+            self.model = PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(config, forward_model_type, noise_generator_type, encoder_type).to(config.device)
         else:
             self.model = PPOAtariSTDIMLinearNoiseNetwork(config, forward_model_type).to(config.device)
+
+        if config.semanticLossOn:
+            self.loss = STDIMLinearLossWithSemanticLoss(self.model,
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+            self.motivation = FMMotivationWithSemanticLoss(self.model,
+                                            self.loss,
+                                            config.motivation_lr,
+                                            config.eta,
+                                            config.device)
+        else:
             self.loss = STDIMLinearLoss(self.model,
-                                        self.model.ppo_encoder.hidden_size,
-                                        self.model.ppo_encoder.local_layer_depth,
-                                        config.device)
-                                        
+                                  self.model.ppo_encoder.hidden_size,
+                                  self.model.ppo_encoder.local_layer_depth,
+                                  config.device)
+            self.motivation = FMMotivation(self.model,
+                                            self.loss,
+                                            config.motivation_lr,
+                                            config.eta,
+                                            config.device)
             
-
-
-
-
-
-
-        self.motivation = FMMotivation(self.model,
-                                       self.loss,
-                                       config.motivation_lr,
-                                       config.eta,
-                                       config.device)
         self.ppo = PPO(self.model,
                        config.lr,
                        config.actor_loss_weight,
@@ -86,6 +60,14 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
                        n_env=config.n_env,
                        device=config.device,
                        motivation=True)
+        
+        base_path = getattr(config, 'path', None)
+        if not base_path:
+            base_path = './models'
+        self.feature_analyzer = FeatureAnalyzer(
+            buffer_size=300, 
+            save_path=os.path.join(base_path, config.name + ".csv")
+        )
 
         #self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
@@ -102,9 +84,10 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
             ('noise_loss', ['mean', 'std', 'max'], 'noise_loss', 0),
             ('total_loss', ['mean', 'std', 'max'], 'total_loss', 0),
             ('acc_encoder', ['mean', 'std', 'max'], 'acc_encoder', 0),
-            ('acc_forward_model', ['mean', 'std', 'max'], 'acc_forward_model', 0)
+            ('acc_forward_model', ['mean', 'std', 'max'], 'acc_forward_model', 0),
+            ('acc_policy', ['mean', 'std', 'max'], 'acc_policy', 0)
         ]
-        info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
+        info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points) 
 
         return info
 
@@ -112,7 +95,7 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), 
                       error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), noise_loss=(1,), 
-                      total_loss=(1,), acc_encoder=(1,), acc_forward_model=(1,))
+                      total_loss=(1,), acc_encoder=(1,), acc_forward_model=(1,), acc_policy=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):
@@ -126,9 +109,12 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
 
             #if mode == AgentMode.TRAINING:
             #    self.state_average.update(next_state)
-
+        
             z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
             error, int_reward = self.motivation.reward(z_next_state, p_next_state)
+
+            if mode == AgentMode.TRAINING:
+                self.feature_analyzer.add(z_state)
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
         reward = torch.cat([ext_reward, int_reward.cpu()], dim=1)
