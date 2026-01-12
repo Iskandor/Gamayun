@@ -64,6 +64,79 @@ class PPOAtariSTDIMNetwork(PPOAtariFMNetwork):
             action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
             action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
             return map_state, map_next_state, predicted_next_state, action_encoder, action_forward_model
+        
+
+class PPOAtariSTDIMMultiStepNetwork(PPOAtariFMNetwork):
+    def __init__(self, config, forward_model_type):
+        super().__init__(config)
+        self.action_dim = config.action_dim
+        self.horizon = config.motivation_horizon
+        self.feature_dim = config.feature_dim
+        self.input_shape = config.input_shape
+        self.forward_model_dim = config.forward_model_dim
+
+        # self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim, activation=nn.GELU, gain=sqrt(2))
+        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
+        self.forward_model = ForwardModel.chooseModel(config, forward_model_type)
+        self.inverse_model = nn.Sequential(
+            nn.Linear(self.feature_dim * 2, self.feature_dim * 2),
+            nn.ReLU(),
+            nn.Linear(self.feature_dim * 2, self.feature_dim),
+            nn.ReLU(),
+            nn.Linear(self.feature_dim, self.action_dim)
+        )
+
+        gain = np.sqrt(2)
+        init_orthogonal(self.inverse_model[0], gain)
+        init_orthogonal(self.inverse_model[2], gain)
+        init_orthogonal(self.inverse_model[4], gain)
+
+    def forward(self, state=None, action=None, next_states=None, stage=0):
+        if stage == ActivationStage.INFERENCE:
+            value, action, probs = super().forward(self.ppo_encoder(state))
+            return value, action, probs
+
+        if stage == ActivationStage.MOTIVATION_INFERENCE:
+            encoded_state = self.ppo_encoder(state)
+            encoded_next_state = self.ppo_encoder(next_states)
+            predicted_next_state = self.forward_model(torch.cat([encoded_state, action], dim=1))
+            return encoded_state, encoded_next_state, predicted_next_state
+
+        if stage == ActivationStage.MOTIVATION_TRAINING:
+            predictions = []
+            targets = []
+
+            map_state = self.ppo_encoder(state, fmaps=True)
+            initial_z = map_state['out']
+
+            map_next_state = self.ppo_encoder(next_states[:, 0], fmaps=True)
+            predicted_next_state = self.forward_model(torch.cat([initial_z, action[:, 0]], dim=1))
+
+            current_z = initial_z + predicted_next_state
+            predictions.append(predicted_next_state)
+            targets.append(initial_z)
+            targets.append(map_next_state['out'])
+
+            for i in range(1, self.horizon):
+                map_next_state_z = self.ppo_encoder(next_states[:, i], fmaps=True)
+                predicted_next_state_z = self.forward_model(torch.cat([current_z, action[:, i]], dim=1))
+                current_z = current_z + predicted_next_state_z
+                
+                predictions.append(predicted_next_state_z)
+                targets.append(map_next_state_z['out'])
+
+            map_state_detached = map_state['out'].detach()
+            map_next_state_detached = map_next_state['out'].detach()
+            predicted_next_state_detached = (initial_z + predicted_next_state).detach()
+            action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
+            action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
+            
+            _, probs_real = self.actor(map_next_state_detached)
+            probs_real = probs_real.detach() 
+            _, probs_pred = self.actor(predicted_next_state_detached)
+            probs_pred = probs_pred.detach() 
+
+            return map_state, map_next_state, predictions, targets, action_encoder, action_forward_model, probs_real, probs_pred 
 
 
 class PPOAtariSTDIMLinearNetwork(PPOAtariFMNetwork):
@@ -379,6 +452,8 @@ class PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(PPOAtariFMNetwork):
             action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
             action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
             _, probs_real = self.actor(map_next_state_detached)
+            probs_real = probs_real.detach() 
+            
             if self.semanticLossOn:
                 _, probs_pred = self.actor(predicted_next_state)
             else:

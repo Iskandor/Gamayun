@@ -29,6 +29,43 @@ class FMMotivation:
         return error, reward
 
 
+class FMMultiStepMotivation:
+    def __init__(self, network, loss, lr, horizon=8, eta=1, device='cpu'):
+        self._network = network
+        self._loss = loss
+        self._optimizer = torch.optim.Adam(self._network.parameters(), lr=lr)
+        self._eta = eta
+        self._horizon = horizon
+        self._device = device
+
+    def train(self, memory, indices):
+        if not indices:
+            return
+
+        s_t_all, a_seq_all, ns_seq_all, m_seq_all = memory.get_sequential_windows(self._horizon)
+        total_samples = s_t_all.shape[0]
+        batch_size = self._network.config.batch_size
+
+       
+        for i in range(0, total_samples, batch_size):
+            end_idx = min(i + batch_size, total_samples)
+            
+            s_t = s_t_all[i:end_idx].to(self._device)
+            a_seq = a_seq_all[i:end_idx].to(self._device)
+            ns_seq = ns_seq_all[i:end_idx].to(self._device)
+            m_seq = m_seq_all[i:end_idx].to(self._device)
+
+            self._optimizer.zero_grad()
+            loss = self._loss(s_t, a_seq, ns_seq, m_seq)
+            loss.backward()
+            self._optimizer.step()
+
+    def reward(self, z_next_state, p_next_state):
+        error =  torch.mean(torch.pow(p_next_state.view(p_next_state.shape[0], -1) - z_next_state.view(z_next_state.shape[0], -1), 2), dim=1).unsqueeze(1)
+        reward = (error * self._eta).clip(0., 1.)
+        return error, reward
+
+
 class FMMotivationWithSemanticLoss:
     def __init__(self, network, loss, lr, eta=1, device='cpu'):
         self._network = network

@@ -86,6 +86,46 @@ class GenericTrajectoryBuffer(GenericBuffer):
         values = [self.memory[k].reshape(-1, batch_size, *self.memory[k].shape[2:]) for k in self.keys]
         batch = self.transition(*values)
         return batch, self.capacity // batch_size
+    
+    def get_sequential_windows(self, seq_len):
+        steps, n_env = self.memory['state'].shape[:2]
+        
+        def pad_tensor(key):
+            data = self.memory[key]
+            padding = torch.zeros((seq_len, n_env) + data.shape[2:], dtype=data.dtype)
+            return torch.cat([data, padding], dim=0)
+
+        p_state = pad_tensor('state')
+        p_action = pad_tensor('action')
+        p_next_state = pad_tensor('next_state')
+        p_mask = pad_tensor('mask') # Done masky z hry
+
+  
+        boundary_mask = torch.ones((steps + seq_len, n_env, 1))
+        boundary_mask[steps:, :, :] = 0 
+        all_s_t, all_a_seq, all_ns_seq, all_m_seq = [], [], [], []
+
+        for e in range(n_env):
+            s_t_env = p_state[:steps, e] 
+            
+            a_seq_env = p_action[:, e].unfold(0, seq_len, 1)[:steps]
+            ns_seq_env = p_next_state[:, e].unfold(0, seq_len, 1)[:steps]
+            
+            m_raw = (p_mask[:, e] * boundary_mask[:, e]).unfold(0, seq_len, 1)[:steps]
+            m_seq_env = torch.cumprod(m_raw.squeeze(1), dim=1).unsqueeze(-1) 
+
+            if a_seq_env.dim() > 2: a_seq_env = a_seq_env.movedim(-1, 1)
+            if ns_seq_env.dim() > 2: ns_seq_env = ns_seq_env.movedim(-1, 1)
+
+            all_s_t.append(s_t_env)
+            all_a_seq.append(a_seq_env)
+            all_ns_seq.append(ns_seq_env)
+            all_m_seq.append(m_seq_env)
+
+        return (torch.cat(all_s_t, dim=0), 
+                torch.cat(all_a_seq, dim=0), 
+                torch.cat(all_ns_seq, dim=0), 
+                torch.cat(all_m_seq, dim=0))
 
     def clear(self):
         self.index = 0
