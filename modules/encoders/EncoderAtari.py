@@ -135,6 +135,60 @@ class AtariStateEncoderLarge(nn.Module):
                 'out': out
             }
         return out
+    
+
+class AtariStateEncoderLarge2Heads(nn.Module):
+    def __init__(self, input_shape, feature_dim, activation=nn.GELU, gain=np.sqrt(2)):
+        super().__init__()
+        self.feature_size = feature_dim
+
+        self.input_channels = input_shape[0]
+        self.input_height = input_shape[1]
+        self.input_width = input_shape[2]
+
+        self.final_conv_size = 128 * (self.input_width // 8) * (self.input_height // 8)
+        self.main = nn.Sequential(
+            nn.Conv2d(self.input_channels, 32, kernel_size=3, stride=2, padding=1),
+            activation(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            activation(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            activation(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            activation(),
+            nn.Flatten()
+        )
+
+        self.head_ppo = nn.Linear(self.final_conv_size, self.feature_size)
+        self.head_motivation = nn.Linear(self.final_conv_size, self.feature_size)
+
+        init_orthogonal(self.main[0], gain)
+        init_orthogonal(self.main[2], gain)
+        init_orthogonal(self.main[4], gain)
+        init_orthogonal(self.main[6], gain)
+
+        init_orthogonal(self.head_ppo, gain)
+        init_orthogonal(self.head_motivation, gain)
+
+        self.local_layer_depth = self.main[4].out_channels
+
+    # Default for PPO
+    def forward(self, inputs):
+        x = self.main(inputs)
+        out_ppo = self.head_ppo(x)
+        
+        return out_ppo
+
+    def forward_motivation(self, inputs, fmaps=False):
+        f5 = self.main[:6](inputs)
+        out = self.head_motivation(self.main[6:](f5))
+
+        if fmaps: 
+            return {
+                'f5': f5.permute(0, 2, 3, 1) ,
+                'out': out
+            }    
+        return out
 
 
 class AtariStateEncoderLarge2(nn.Module):

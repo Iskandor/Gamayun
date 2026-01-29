@@ -7,9 +7,9 @@ from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from utils.FeatureAnalyzer import FeatureAnalyzer
-from loss.FMLoss import STDIMLinearLoss, STDIMLinearLossWithSemanticLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNoiseNetwork, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual
-from motivation.FMMotivation import FMMotivation, FMMotivationWithSemanticLoss
+from loss.FMLoss import STDIMLinearLoss, STDIMTrulyLinearLoss, STDIMLoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNoiseNetwork, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual, PPOAtariSTDIMTrulyLinearNetwork, PPOAtariSTDIMLinearNetworkWithActionProjection
+from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
 from modules.forward_models.ForwardModel import ForwardModelType
@@ -22,29 +22,34 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
         
         if type == 1:
             self.model = PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual(config, forward_model_type, noise_generator_type, encoder_type).to(config.device)
+        elif type == 2:
+            self.model = PPOAtariSTDIMTrulyLinearNetwork(config, forward_model_type).to(config.device)
+        elif type == 3:
+            self.model = PPOAtariSTDIMLinearNetworkWithActionProjection(config, forward_model_type).to(config.device)
         else:
             self.model = PPOAtariSTDIMLinearNoiseNetwork(config, forward_model_type).to(config.device)
 
-        if config.semanticLossOn:
-            self.loss = STDIMLinearLossWithSemanticLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-            self.motivation = FMMotivationWithSemanticLoss(self.model,
-                                            self.loss,
-                                            config.motivation_lr,
-                                            config.eta,
-                                            config.device)
-        else:
+        if type == 2:
+            self.loss = STDIMTrulyLinearLoss(self.model,
+                                    self.model.ppo_encoder.feature_size,
+                                    self.model.ppo_encoder.local_layer_depth,
+                                    config.device)
+        elif type == 3:
+            self.loss = STDIMLoss(self.model,
+                                    self.model.ppo_encoder.feature_size,
+                                    self.model.ppo_encoder.local_layer_depth,
+                                    config.device)
+        else:     
             self.loss = STDIMLinearLoss(self.model,
-                                  self.model.ppo_encoder.hidden_size,
-                                  self.model.ppo_encoder.local_layer_depth,
-                                  config.device)
-            self.motivation = FMMotivation(self.model,
-                                            self.loss,
-                                            config.motivation_lr,
-                                            config.eta,
-                                            config.device)
+                                    self.model.ppo_encoder.feature_size,
+                                    self.model.ppo_encoder.local_layer_depth,
+                                    config.device)
+            
+        self.motivation = FMMotivation(self.model,
+                                        self.loss,
+                                        config.motivation_lr,
+                                        config.eta,
+                                        config.device)
             
         self.ppo = PPO(self.model,
                        config.lr,
@@ -61,15 +66,15 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
                        device=config.device,
                        motivation=True)
         
-        base_path = getattr(config, 'path', None)
-        if not base_path:
-            base_path = './models'
-        self.feature_analyzer = FeatureAnalyzer(
-            buffer_size=300, 
-            save_path=os.path.join(base_path, config.name + ".csv")
-        )
+        #base_path = getattr(config, 'path', None)
+        #if not base_path:
+        #    base_path = './models'
+        #self.feature_analyzer = FeatureAnalyzer(
+        #    buffer_size=300, 
+        #    save_path=os.path.join(base_path, config.name + ".csv")
+        #)
 
-        #self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
+        self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     def _initialize_info(self, trial):
         info_points = [
@@ -105,16 +110,16 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
             self._check_terminal_states(env, mode, done, next_state)
 
             next_state = self._encode_state(next_state)
-            #next_state = self.state_average.process(next_state).clip_(-4., 4.)
+            next_state = self.state_average.process(next_state).clip_(-4., 4.)
 
-            #if mode == AgentMode.TRAINING:
-            #    self.state_average.update(next_state)
+            if mode == AgentMode.TRAINING:
+                self.state_average.update(next_state)
         
             z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
             error, int_reward = self.motivation.reward(z_next_state, p_next_state)
 
-            if mode == AgentMode.TRAINING:
-                self.feature_analyzer.add(z_state)
+            #if mode == AgentMode.TRAINING:
+            #    self.feature_analyzer.add(z_state)
 
         ext_reward = torch.tensor(reward, dtype=torch.float32)
         reward = torch.cat([ext_reward, int_reward.cpu()], dim=1)

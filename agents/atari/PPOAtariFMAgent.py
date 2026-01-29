@@ -53,7 +53,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
         if _type == ArchitectureType.ST_DIM:
             model_class = PPOAtariSTDIMNetwork(config, forward_model_type).to(config.device)
             loss_class = STDIMLoss(model_class,
-                                   model_class.ppo_encoder.hidden_size,
+                                   model_class.ppo_encoder.feature_size,
                                    model_class.ppo_encoder.local_layer_depth,
                                    config.device)
         elif _type == ArchitectureType.I_JEPA:
@@ -79,7 +79,8 @@ class PPOAtariFMAgent(PPOAtariAgent):
             ('fwd_loss', ['mean', 'std', 'max'], 'fwd_loss', 0),
             ('total_loss', ['mean', 'std', 'max'], 'total_loss', 0),
             ('acc_encoder', ['mean', 'std', 'max'], 'acc_encoder', 0),
-            ('acc_forward_model', ['mean', 'std', 'max'], 'acc_forward_model', 0)
+            ('acc_forward_model', ['mean', 'std', 'max'], 'acc_forward_model', 0),
+            ('acc_policy', ['mean', 'std', 'max'], 'acc_policy', 0)
         ]
         info = InfoCollector(trial, self.step_counter, self.reward_avg, info_points)
 
@@ -89,7 +90,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), 
                       error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,), 
-                      acc_encoder=(1,), acc_forward_model=(1,))
+                      acc_encoder=(1,), acc_forward_model=(1,), acc_policy=(1,))
         return analysis
 
     def _step(self, env, trial, state, mode):
