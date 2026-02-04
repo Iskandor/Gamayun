@@ -1167,7 +1167,7 @@ class ConfigMontezumaFMLinearNoiseWithNoiseResidualSTDIM_32_EncoderGELU_Eta_0_5(
         agent.training_loop(self.env, name, trial)
         
 
-class ConfigMontezumaFMMultiStep_Horizon_16_STDIM_32(ConfigAtari):
+class ConfigMontezumaFMMultiStep_Horizon_4_STDIM_16(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
                          steps=32,
@@ -1182,7 +1182,7 @@ class ConfigMontezumaFMMultiStep_Horizon_16_STDIM_32(ConfigAtari):
         self.motivation_lr = 1e-4
         self.eta = 0.01
         self.forward_model_dim = 1024
-        self.motivation_horizon = 16
+        self.motivation_horizon = 4
         self.type = 'st-dim_fm'
 
     def train(self, trial):
@@ -1279,10 +1279,10 @@ class ConfigMontezumaFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP
         agent.training_loop(self.env, name, trial)
 
 
-class ConfigMontezumaFMSTDIM_32_feature_dim_1024(ConfigAtari):
+class ConfigMontezumaFMSTDIM_16_feature_dim_1024(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='MontezumaRevengeNoFrameskip-v4',
-                         steps=32,
+                         steps=16,
                          lr=1e-4,
                          n_env=128,
                          gamma=[0.998, 0.99],

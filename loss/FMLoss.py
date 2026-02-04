@@ -220,11 +220,16 @@ class STDIMMultiStepLoss(FMLoss):
         
         fwd_loss = 0
         seq_len = len(predictions)
+
         for k in range(seq_len):
             m = masks[:, k]
-            mse_elements = (predictions[k] -  (targets[k+1] - targets[k])).pow(2) 
-            fwd_loss += (mse_elements * m).mean()
-        total_fwd_loss = fwd_loss / seq_len
+            mse_elements = (predictions[k] - targets[k]).pow(2).mean(dim=1) 
+            fwd_loss += (mse_elements * m).sum()
+        total_valid_steps = masks.sum()
+        if total_valid_steps > 0:
+            total_fwd_loss = fwd_loss / total_valid_steps
+        else:
+            total_fwd_loss = torch.tensor(0.0).to(self.device)
 
         map_state_f5 = map_state['f5']
         map_next_state_out = map_next_state['out']

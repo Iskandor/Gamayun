@@ -138,7 +138,7 @@ class AtariStateEncoderLarge(nn.Module):
     
 
 class AtariStateEncoderLarge2Heads(nn.Module):
-    def __init__(self, input_shape, feature_dim, activation=nn.GELU, gain=np.sqrt(2)):
+    def __init__(self, input_shape, feature_dim, activation=nn.ReLU, gain=0.5):
         super().__init__()
         self.feature_size = feature_dim
 
@@ -189,7 +189,7 @@ class AtariStateEncoderLarge2Heads(nn.Module):
                 'out': out
             }    
         return out
-
+    
 
 class AtariStateEncoderLarge2(nn.Module):
 

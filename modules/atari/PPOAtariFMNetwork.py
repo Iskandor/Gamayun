@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
 
 from modules import init_orthogonal
 from modules.PPO_Modules import PPOMotivationNetwork, ActivationStage
@@ -38,7 +39,7 @@ class PPOAtariSTDIMNetwork(PPOAtariFMNetwork):
 
     def forward(self, state=None, action=None, next_state=None, stage=0):
         if stage == ActivationStage.INFERENCE:
-            value, action, probs = super().forward(self.ppo_encoder.forward_motivation(state))
+            value, action, probs = super().forward(self.ppo_encoder(state))
             return value, action, probs
 
         if stage == ActivationStage.MOTIVATION_INFERENCE:
@@ -91,13 +92,16 @@ class PPOAtariSTDIMMultiStepNetwork(PPOAtariFMNetwork):
 
     def forward(self, state=None, action=None, next_states=None, stage=0):
         if stage == ActivationStage.INFERENCE:
-            value, action, probs = super().forward(self.ppo_encoder(state))
+            z = self.ppo_encoder(state)
+            z = F.normalize(z, p=2, dim=1) 
+            value, action, probs = super().forward(z)
             return value, action, probs
 
         if stage == ActivationStage.MOTIVATION_INFERENCE:
-            encoded_state = self.ppo_encoder(state)
-            encoded_next_state = self.ppo_encoder(next_states)
-            predicted_next_state = self.forward_model(torch.cat([encoded_state, action], dim=1))
+            encoded_state = F.normalize(self.ppo_encoder(state), p=2, dim=1)
+            encoded_next_state = F.normalize(self.ppo_encoder(next_states), p=2, dim=1)
+            delta = self.forward_model(torch.cat([encoded_state, action], dim=1))
+            predicted_next_state = F.normalize(encoded_state + delta, p=2, dim=1)
             return encoded_state, encoded_next_state, predicted_next_state
 
         if stage == ActivationStage.MOTIVATION_TRAINING:
@@ -105,27 +109,30 @@ class PPOAtariSTDIMMultiStepNetwork(PPOAtariFMNetwork):
             targets = []
 
             map_state = self.ppo_encoder(state, fmaps=True)
-            initial_z = map_state['out']
+            initial_z = F.normalize(map_state['out'], p=2, dim=1)
 
+            map_state['out'] = initial_z 
             map_next_state = self.ppo_encoder(next_states[:, 0], fmaps=True)
-            predicted_next_state = self.forward_model(torch.cat([initial_z, action[:, 0]], dim=1))
+            target_t1 = F.normalize(map_next_state['out'], p=2, dim=1)
+            map_next_state['out'] = target_t1
 
-            current_z = initial_z + predicted_next_state
-            predictions.append(predicted_next_state)
-            targets.append(initial_z)
-            targets.append(map_next_state['out'])
+            delta_0 = self.forward_model(torch.cat([initial_z, action[:, 0]], dim=1))
+            current_z = F.normalize(initial_z + delta_0, p=2, dim=1)
+            predictions.append(current_z)
+            targets.append(target_t1) 
 
             for i in range(1, self.horizon):
-                map_next_state_z = self.ppo_encoder(next_states[:, i]).detach()
-                predicted_next_state_z = self.forward_model(torch.cat([current_z, action[:, i]], dim=1))
-                current_z = current_z + predicted_next_state_z
+                raw_next_z = self.ppo_encoder(next_states[:, i], fmaps=False)
+                map_next_state_z = F.normalize(raw_next_z, p=2, dim=1).detach()
+                delta_i = self.forward_model(torch.cat([current_z, action[:, i]], dim=1))
+                current_z = F.normalize(current_z + delta_i, p=2, dim=1)
                 
-                predictions.append(predicted_next_state_z)
+                predictions.append(current_z)
                 targets.append(map_next_state_z)
 
-            map_state_detached = map_state['out'].detach()
-            map_next_state_detached = map_next_state['out'].detach()
-            predicted_next_state_detached = (initial_z + predicted_next_state).detach()
+            map_state_detached = initial_z.detach()
+            map_next_state_detached = targets[0].detach()
+            predicted_next_state_detached = predictions[0].detach()
             action_encoder = self.inverse_model(torch.cat([map_state_detached, map_next_state_detached], dim=1))
             action_forward_model = self.inverse_model(torch.cat([map_state_detached, predicted_next_state_detached], dim=1))
             
