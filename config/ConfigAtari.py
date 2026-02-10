@@ -1098,7 +1098,7 @@ class ConfigMontezumaFMLinearNoiseWithNoiseResidualSTDIM_32(ConfigAtari):
         agent = PPOAtariFMLinearAgent(self,
                                       forward_model_type=ForwardModelType.ForwardModelSkipConnection,
                                       noise_generator_type=NoiseModelType.NoiseModel,
-                                      type=2,
+                                      type=1,
                                       encoder_type=2)
         agent.training_loop(self.env, name, trial)
 
