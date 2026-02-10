@@ -16,7 +16,7 @@ from modules.forward_models.ForwardModel import ForwardModelType
 from modules.forward_models.NoiseModel import NoiseModelType
 
 class PPOAtariFMLinearAgent(PPOAtariAgent):
-    def __init__(self, config, forward_model_type=ForwardModelType.ForwardModelSkipConnection, noise_generator_type=NoiseModelType.NoiseModel, type=0, semanticLossOn=False, encoder_type=1):
+    def __init__(self, config, forward_model_type=ForwardModelType.ForwardModelSkipConnection, noise_generator_type=NoiseModelType.NoiseModel, type=0, semanticLossOn=False, encoder_type=2):
         super().__init__(config)
         config.semanticLossOn = semanticLossOn
         
@@ -74,7 +74,7 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
         #    save_path=os.path.join(base_path, config.name + ".csv")
         #)
 
-        self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
+        # self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     def _initialize_info(self, trial):
         info_points = [
@@ -112,8 +112,8 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
             next_state = self._encode_state(next_state)
             next_state = self.state_average.process(next_state).clip_(-4., 4.)
 
-            if mode == AgentMode.TRAINING:
-                self.state_average.update(next_state)
+            #if mode == AgentMode.TRAINING:
+            #    self.state_average.update(next_state)
         
             z_state, z_next_state, p_next_state = self.model(state, action, next_state, stage=ActivationStage.MOTIVATION_INFERENCE)
             error, int_reward = self.motivation.reward(z_next_state, p_next_state)
