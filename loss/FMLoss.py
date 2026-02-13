@@ -55,7 +55,7 @@ class STDIMLoss(FMLoss):
         map_state, map_next_state, p_next_state, action_encoder, action_forward_model, probs_real, probs_pred = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         map_state_f5 = map_state['f5']
-        map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
+        map_next_state_out, map_next_state_f5 = map_next_state['out_stdim'], map_next_state['f5']
 
         local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
         global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
@@ -66,7 +66,7 @@ class STDIMLoss(FMLoss):
         
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
         _, acc_policy = super()._policy_consistency_loss(probs_real, probs_pred)
-        fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
+        fwd_loss = super()._forward_loss(p_next_state, map_next_state['out'])
         total_loss = loss + norm_loss + fwd_loss + inverse_loss
 
         ResultCollector().update(loss=loss.unsqueeze(-1).detach().cpu(),
@@ -137,7 +137,7 @@ class STDIMTrulyLinearLoss(FMLoss):
         map_state, map_next_state, p_next_state, dynamic_change, action_encoder, action_forward_model, probs_real, probs_pred = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         map_state_f5 = map_state['f5']
-        map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
+        map_next_state_out, map_next_state_f5 = map_next_state['out_stdim'], map_next_state['f5']
 
         local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
         global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
@@ -223,13 +223,9 @@ class STDIMMultiStepLoss(FMLoss):
 
         for k in range(seq_len):
             m = masks[:, k]
-            mse_elements = (predictions[k] - targets[k]).pow(2).mean(dim=1) 
-            fwd_loss += (mse_elements * m).sum()
-        total_valid_steps = masks.sum()
-        if total_valid_steps > 0:
-            total_fwd_loss = fwd_loss / total_valid_steps
-        else:
-            total_fwd_loss = torch.tensor(0.0).to(self.device)
+            mse_elements = (predictions[k] -  (targets[k+1] - targets[k])).pow(2) 
+            fwd_loss += (mse_elements * m).mean()
+        total_fwd_loss = fwd_loss / seq_len
 
         map_state_f5 = map_state['f5']
         map_next_state_out = map_next_state['out']
@@ -313,7 +309,7 @@ class STDIMLinearLoss(FMLoss):
         map_state, map_next_state, p_next_state, action_encoder, action_forward_model, noise, probs_real, probs_pred = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
         map_state_f5 = map_state['f5']
-        map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
+        map_next_state_out, map_next_state_f5 = map_next_state['out_stdim'], map_next_state['f5']
 
         local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
         global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
@@ -324,7 +320,7 @@ class STDIMLinearLoss(FMLoss):
         
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
         _, acc_policy = super()._policy_consistency_loss(probs_real, probs_pred)
-        fwd_loss = super()._forward_loss(p_next_state, map_next_state_out)
+        fwd_loss = super()._forward_loss(p_next_state, map_next_state['out'])
         noise_loss = (noise.pow(2).sum(dim=1)).mean()
         total_loss = loss + norm_loss + fwd_loss + inverse_loss + self.noise_coef * noise_loss
 
