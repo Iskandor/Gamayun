@@ -64,7 +64,6 @@ class FMMultiStepMotivation:
     def reward(self, z_next_state, p_next_state):
         error =  torch.mean(torch.pow(p_next_state.view(p_next_state.shape[0], -1) - z_next_state.view(z_next_state.shape[0], -1), 2), dim=1).unsqueeze(1)
         reward = (error * self._eta).clip(0., 1.)
-        # reward = tanh(error) * self._eta
         return error, reward
 
 

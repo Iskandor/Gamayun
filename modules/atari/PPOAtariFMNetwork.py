@@ -75,7 +75,7 @@ class PPOAtariSTDIMMultiStepNetwork(PPOAtariFMNetwork):
         self.input_shape = config.input_shape
         self.forward_model_dim = config.forward_model_dim
 
-        self.ppo_encoder = AtariStateEncoderLarge(self.input_shape, self.feature_dim)
+        self.ppo_encoder = AtariStateEncoderLarge2(self.input_shape, self.feature_dim)
         self.forward_model = ForwardModel.chooseModel(config, forward_model_type)
         self.inverse_model = nn.Sequential(
             nn.Linear(self.feature_dim * 2, self.feature_dim * 2),
@@ -107,17 +107,18 @@ class PPOAtariSTDIMMultiStepNetwork(PPOAtariFMNetwork):
 
             map_state = self.ppo_encoder(state, fmaps=True)
             initial_z = map_state['out']
+            targets.append(initial_z)
+            initial_z = initial_z.detach()
 
             map_next_state = self.ppo_encoder(next_states[:, 0], fmaps=True)
             predicted_next_state = self.forward_model(torch.cat([initial_z, action[:, 0]], dim=1))
 
             current_z = initial_z + predicted_next_state
             predictions.append(predicted_next_state)
-            targets.append(initial_z)
             targets.append(map_next_state['out'])
 
             for i in range(1, self.horizon):
-                map_next_state_z = self.ppo_encoder(next_states[:, i]).detach()
+                map_next_state_z = self.ppo_encoder(next_states[:, i])
                 predicted_next_state_z = self.forward_model(torch.cat([current_z, action[:, i]], dim=1))
                 current_z = current_z + predicted_next_state_z
                 

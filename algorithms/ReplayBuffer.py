@@ -98,7 +98,7 @@ class GenericTrajectoryBuffer(GenericBuffer):
         p_state = pad_tensor('state')
         p_action = pad_tensor('action')
         p_next_state = pad_tensor('next_state')
-        p_mask = pad_tensor('mask') # Done masky z hry
+        p_mask = pad_tensor('mask')
 
   
         boundary_mask = torch.ones((steps + seq_len, n_env, 1))

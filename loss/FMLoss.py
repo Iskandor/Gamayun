@@ -39,6 +39,52 @@ class FMLoss(torch.nn.Module):
         log_probs_pred = torch.log(probs_pred.clamp(min=1e-8))
         policy_loss = -(probs_real * log_probs_pred).sum(dim=1).mean()
         return policy_loss, acc_policy
+    
+    @staticmethod
+    def global_local_loss(z_next_state, map_state, projection, device):
+        # Loss 1: Global at time t, f5 patches at time t-1
+        N = z_next_state.size(0)
+        sy = map_state.size(1)
+        sx = map_state.size(2)
+        
+        positive = []
+        for y in range(sy):
+            for x in range(sx):
+                positive.append(map_state[:, y, x, :].T)
+
+        predictions = projection(z_next_state)
+        positive = torch.stack(positive)
+        logits = torch.matmul(predictions, positive)
+        target = torch.arange(N).to(device).unsqueeze(0).repeat(logits.shape[0], 1)
+
+        loss = F.cross_entropy(logits, target, reduction='mean')
+        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
+
+        return loss, norm_loss
+
+    @staticmethod
+    def local_local_loss(map_state, map_next_state, projection, device):
+        # Loss 2: f5 patches at time t, with f5 patches at time t-1
+        N = map_next_state.size(0)
+        sy = map_state.size(1)
+        sx = map_state.size(2)
+
+        predictions = []
+        positive = []
+        for y in range(sy):
+            for x in range(sx):
+                predictions.append(projection(map_next_state[:, y, x, :]))
+                positive.append(map_state[:, y, x, :].T)
+
+        predictions = torch.stack(predictions)
+        positive = torch.stack(positive)
+        logits = torch.matmul(predictions, positive)
+        target = torch.arange(N).to(device).unsqueeze(0).repeat(logits.shape[0], 1)
+
+        loss = F.cross_entropy(logits, target, reduction='mean')
+        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
+
+        return loss, norm_loss
 
 
 # ST-DIM specific loss + general one
@@ -57,8 +103,8 @@ class STDIMLoss(FMLoss):
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out_stdim'], map_next_state['f5']
 
-        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
-        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5, self.projection2, self.device)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5, self.projection1, self.device)
 
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
@@ -79,50 +125,6 @@ class STDIMLoss(FMLoss):
         
         return total_loss
 
-    def global_local_loss(self, z_next_state, map_state):
-        # Loss 1: Global at time t, f5 patches at time t-1
-        N = z_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-        
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = self.projection1(z_next_state)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
-    def local_local_loss(self, map_state, map_next_state):
-        # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-
-        predictions = []
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                predictions.append(self.projection2(map_next_state[:, y, x, :]))
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = torch.stack(predictions)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
 
 class STDIMTrulyLinearLoss(FMLoss):
     def __init__(self, model, feature_size, local_layer_depth, device):
@@ -139,8 +141,8 @@ class STDIMTrulyLinearLoss(FMLoss):
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out_stdim'], map_next_state['f5']
 
-        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
-        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5, self.projection2, self.device)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5, self.projection1, self.device)
 
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
@@ -160,50 +162,6 @@ class STDIMTrulyLinearLoss(FMLoss):
                                  acc_policy=acc_policy.unsqueeze(-1).detach().cpu())
         
         return total_loss
-
-    def global_local_loss(self, z_next_state, map_state):
-        # Loss 1: Global at time t, f5 patches at time t-1
-        N = z_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-        
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = self.projection1(z_next_state)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
-    def local_local_loss(self, map_state, map_next_state):
-        # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-
-        predictions = []
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                predictions.append(self.projection2(map_next_state[:, y, x, :]))
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = torch.stack(predictions)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
         
 
 class STDIMMultiStepLoss(FMLoss):
@@ -223,7 +181,7 @@ class STDIMMultiStepLoss(FMLoss):
 
         for k in range(seq_len):
             m = masks[:, k]
-            mse_elements = (predictions[k] -  (targets[k+1] - targets[k])).pow(2) 
+            mse_elements = (predictions[k] - (targets[k+1] - targets[k]).detach()).pow(2) 
             fwd_loss += (mse_elements * m).mean()
         total_fwd_loss = fwd_loss / seq_len
 
@@ -231,8 +189,8 @@ class STDIMMultiStepLoss(FMLoss):
         map_next_state_out = map_next_state['out']
         map_next_state_f5 = map_next_state['f5']
         
-        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
-        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5, self.projection2, self.device)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5, self.projection1, self.device)
 
         loss = global_local_loss + local_local_loss
         norm_loss = (global_local_norm + local_local_norm) * 1e-4
@@ -249,50 +207,6 @@ class STDIMMultiStepLoss(FMLoss):
                                  acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu(),
                                  acc_policy=acc_policy.unsqueeze(-1).detach().cpu())
         return total_loss
-
-    def global_local_loss(self, z_next_state, map_state):
-        # Loss 1: Global at time t, f5 patches at time t-1
-        N = z_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-        
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = self.projection1(z_next_state)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
-    def local_local_loss(self, map_state, map_next_state):
-        # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-
-        predictions = []
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                predictions.append(self.projection2(map_next_state[:, y, x, :]))
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = torch.stack(predictions)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
 
 
 class STDIMLinearLoss(FMLoss):
@@ -311,8 +225,8 @@ class STDIMLinearLoss(FMLoss):
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out_stdim'], map_next_state['f5']
 
-        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
-        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5, self.projection2, self.device)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5, self.projection1, self.device)
 
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
@@ -335,50 +249,6 @@ class STDIMLinearLoss(FMLoss):
         
         return total_loss
 
-    def global_local_loss(self, z_next_state, map_state):
-        # Loss 1: Global at time t, f5 patches at time t-1
-        N = z_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-        
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = self.projection1(z_next_state)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
-    def local_local_loss(self, map_state, map_next_state):
-        # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-
-        predictions = []
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                predictions.append(self.projection2(map_next_state[:, y, x, :]))
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = torch.stack(predictions)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
 
 class STDIMLinearLossWithSemanticLoss(FMLoss):
     def __init__(self, model, feature_size, local_layer_depth, device, noise_coef=0.001):
@@ -396,8 +266,8 @@ class STDIMLinearLossWithSemanticLoss(FMLoss):
         map_state_f5 = map_state['f5']
         map_next_state_out, map_next_state_f5 = map_next_state['out'], map_next_state['f5']
 
-        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5)
-        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5)
+        local_local_loss, local_local_norm = self.local_local_loss(map_state_f5, map_next_state_f5, self.projection2, self.device)
+        global_local_loss, global_local_norm = self.global_local_loss(map_next_state_out, map_state_f5, self.projection1, self.device)
 
         loss = global_local_loss + local_local_loss
         norm_loss = global_local_norm + local_local_norm
@@ -419,50 +289,6 @@ class STDIMLinearLossWithSemanticLoss(FMLoss):
                                  acc_policy=acc_policy.unsqueeze(-1).detach().cpu())
         
         return total_loss
-
-    def global_local_loss(self, z_next_state, map_state):
-        # Loss 1: Global at time t, f5 patches at time t-1
-        N = z_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-        
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = self.projection1(z_next_state)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
-
-    def local_local_loss(self, map_state, map_next_state):
-        # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-
-        predictions = []
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                predictions.append(self.projection2(map_next_state[:, y, x, :]))
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = torch.stack(predictions)
-        positive = torch.stack(positive)
-        logits = torch.matmul(predictions, positive)
-        target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
-
-        loss = F.cross_entropy(logits, target, reduction='mean')
-        norm_loss = torch.norm(logits, p=2, dim=[1, 2]).mean()
-
-        return loss, norm_loss
 
 
 # ST-DIM specific loss + general one

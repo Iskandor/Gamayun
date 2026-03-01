@@ -113,7 +113,7 @@ class AtariStateEncoderLarge(nn.Module):
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             activation(),
             nn.Flatten(),
-            nn.Linear(self.final_conv_size, self.feature_size),
+            nn.Linear(self.final_conv_size, self.feature_size)
         )
 
         # gain = nn.init.calculate_gain('relu')
@@ -198,7 +198,7 @@ class AtariStateEncoderLarge2Heads(nn.Module):
 
 class AtariStateEncoderLarge2(nn.Module):
 
-    def __init__(self, input_shape, feature_dim, activation=nn.GELU, gain=np.sqrt(2)):
+    def __init__(self, input_shape, feature_dim, activation=nn.ReLU, gain=0.5):
         super().__init__()
         self.feature_size = feature_dim
         self.hidden_size = self.feature_size
