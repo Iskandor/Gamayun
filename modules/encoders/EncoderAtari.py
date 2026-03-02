@@ -179,19 +179,19 @@ class AtariStateEncoderLarge2Heads(nn.Module):
         
         return out_ppo
 
-    def forward_motivation_training(self, inputs, fmaps=False, stdim=False):
+    def forward_motivation_training(self, inputs, fmaps=False, policy=False):
         f5 = self.main[:6](inputs)
         target = self.main[6:](f5)
-        out = self.head_ppo(target)
-        out_stdim = None
-        if stdim:
-            out_stdim = self.head_motivation(target)
+        out = self.head_motivation(target)
+        out_policy = None
+        if policy:
+            out_policy = self.head_ppo(target)
 
         if fmaps: 
             return {
                 'f5': f5.permute(0, 2, 3, 1),
                 'out': out,
-                'out_stdim': out_stdim
+                'out_policy': out_policy
             }
         return out
     
