@@ -5,9 +5,9 @@ from agents.atari.PPOAtariAgent import PPOAtariAgent
 from algorithms.PPO import PPO
 from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
-from loss.FMLoss import IJEPAEmaEncoderLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariIJEPAEmaEncoderNetwork, PPOAtariIJEPANetwork2
-from motivation.FMMotivation import FMIJEPAMotivation, FMIJEPAMotivation2
+from loss.FMLoss import IJEPALoss
+from modules.atari.PPOAtariFMNetwork import PPOAtariIJEPANetwork2
+from motivation.FMMotivation import FMIJEPAMotivation
 from modules.PPO_Modules import ActivationStage
 
 
@@ -16,18 +16,12 @@ class PPOAtariFMIJEPAAgent(PPOAtariAgent):
         super().__init__(config)
         model_class, loss_class = self._set_up(config, type)
         self.model = model_class
-        if type == 0:
-            self.motivation = FMIJEPAMotivation(self.model,
-                                        loss_class,
-                                        config.motivation_lr,
-                                        config.eta,
-                                        config.device)
-        else:
-            self.motivation = FMIJEPAMotivation2(self.model,
-                                        loss_class,
-                                        config.motivation_lr,
-                                        config.eta,
-                                        config.device)
+        
+        self.motivation = FMIJEPAMotivation(self.model,
+                                    loss_class,
+                                    config.motivation_lr,
+                                    config.eta,
+                                    config.device)
         self.ppo = PPO(self.model,
                        config.lr,
                        config.actor_loss_weight,
@@ -42,16 +36,12 @@ class PPOAtariFMIJEPAAgent(PPOAtariAgent):
                        n_env=config.n_env,
                        device=config.device,
                        motivation=True)
-
         #self.hidden_average = ExponentialDecayNorm(config.feature_dim, config.device)
 
     @staticmethod
     def _set_up(config, type):
-        if type == 0:
-            model_class = PPOAtariIJEPAEmaEncoderNetwork(config).to(config.device)
-        else:
-            model_class = PPOAtariIJEPANetwork2(config).to(config.device)
-        loss_class = IJEPAEmaEncoderLoss(model_class, config.device, config.delta)
+        model_class = PPOAtariIJEPANetwork2(config).to(config.device)
+        loss_class = IJEPALoss(model_class, config.device, config.delta)
         return model_class, loss_class
 
     def _initialize_info(self, trial):
@@ -75,7 +65,7 @@ class PPOAtariFMIJEPAAgent(PPOAtariAgent):
     def _initialize_analysis(self):
         analysis = ResultCollector()
         analysis.init(self.config.n_env, re=(1,), ri=(1,), score=(1,), feature_space=(1,), 
-                      error=(1,), loss=(1,), norm_loss=(1,), fwd_loss=(1,), total_loss=(1,), 
+                      error=(1,), inverse_loss=(1,), var_loss=(1,), cov_loss=(1,), fwd_loss=(1,), total_loss=(1,), 
                       acc_encoder=(1,), acc_forward_model=(1,))
         return analysis
 

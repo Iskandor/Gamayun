@@ -8,7 +8,7 @@ from analytic.InfoCollector import InfoCollector
 from analytic.ResultCollector import ResultCollector
 from utils.FeatureAnalyzer import FeatureAnalyzer
 from loss.FMLoss import STDIMLinearLoss, STDIMTrulyLinearLoss, STDIMLoss
-from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNoiseNetwork, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual, PPOAtariSTDIMTrulyLinearNetwork, PPOAtariSTDIMLinearNetworkWithActionProjection
+from modules.atari.PPOAtariFMNetwork import PPOAtariSTDIMLinearNoiseNetwork, PPOAtariSTDIMLinearNoiseNetworkWithNoiseResidual, PPOAtariSTDIMTrulyLinearNetwork, PPOAtariSTDIMTrulyLinearNetwork2, PPOAtariSTDIMLinearNetworkWithActionProjection
 from motivation.FMMotivation import FMMotivation
 from utils.StateNorm import ExponentialDecayNorm
 from modules.PPO_Modules import ActivationStage
@@ -26,10 +26,12 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
             self.model = PPOAtariSTDIMTrulyLinearNetwork(config, forward_model_type).to(config.device)
         elif type == 3:
             self.model = PPOAtariSTDIMLinearNetworkWithActionProjection(config, forward_model_type).to(config.device)
+        elif type == 4:
+            self.model = PPOAtariSTDIMTrulyLinearNetwork2(config, forward_model_type).to(config.device)
         else:
             self.model = PPOAtariSTDIMLinearNoiseNetwork(config, forward_model_type).to(config.device)
 
-        if type == 2:
+        if type == 2 or type == 4:
             self.loss = STDIMTrulyLinearLoss(self.model,
                                     self.model.ppo_encoder.feature_size,
                                     self.model.ppo_encoder.local_layer_depth,

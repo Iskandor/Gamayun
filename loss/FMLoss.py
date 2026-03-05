@@ -293,37 +293,36 @@ class STDIMLinearLossWithSemanticLoss(FMLoss):
 
 # ST-DIM specific loss + general one
 class IJEPALoss(FMLoss):
-    def __init__(self, model, device, delta):
+    def __init__(self, model, device, ):
         super(IJEPALoss, self).__init__()
 
         self.model = model
         self.device = device
-        self.delta = delta
+        self.var_coeff = 1.0
+        self.cov_coeff = 1 / 25
+        self.idm_coeff = 1.0 
 
     def __call__(self, states, actions, next_states):
-        # Probably need to change the output of AtariLargeEncoder as we don't need f maps
-        map_state, map_next_state, p_next_state, h_next_state, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
+        map_next_state, p_next_state, proj_encoded_next, action_encoder, action_forward_model = self.model(states, actions, next_states, stage=ActivationStage.MOTIVATION_TRAINING)
 
-        var_cov_loss = self._var_cov_loss(self, map_next_state)
-        hidden_loss = self._hidden_loss(h_next_state)
         forward_loss = super()._forward_loss(p_next_state, map_next_state)
+        var_loss = self.variance(proj_encoded_next)
+        cov_loss = self.covariance(proj_encoded_next)
         inverse_loss, acc_encoder, acc_forward_model = super()._inverse_loss(action_encoder, action_forward_model, actions)
 
-        total_loss = var_cov_loss + hidden_loss * self.delta + forward_loss + inverse_loss
+        total_loss = forward_loss + (self.var_coeff * var_loss) + (self.cov_coeff * cov_loss) + (self.idm_coeff * inverse_loss)
 
-        ResultCollector().update(loss=var_cov_loss.unsqueeze(-1).detach().cpu(),
-                                 norm_loss=hidden_loss.unsqueeze(-1).detach().cpu(),
+        ResultCollector().update(inverse_loss=inverse_loss.unsqueeze(-1).detach().cpu(),
+                                 var_loss=var_loss.unsqueeze(-1).detach().cpu(),
+                                 cov_loss=cov_loss.unsqueeze(-1).detach().cpu(),
                                  fwd_loss=forward_loss.unsqueeze(-1).detach().cpu(),
                                  total_loss=total_loss.unsqueeze(-1).detach().cpu(),
                                  acc_encoder=acc_encoder.unsqueeze(-1).detach().cpu(),
                                  acc_forward_model=acc_forward_model.unsqueeze(-1).detach().cpu())
 
         return total_loss
-        # return super()._forward_loss(predicted_state, real_state)
 
-    # forward model loss + hidden loss + var/cov loss
-    # hidden loss - gradually decreasing
-
+    # Not needed now i quess
     @staticmethod
     def _hidden_loss(h_next_state):
         loss = torch.abs(h_next_state).mean() + (h_next_state.std(dim=0)).mean()
@@ -334,9 +333,15 @@ class IJEPALoss(FMLoss):
         loss = self.variance(z_state) + self.covariance(z_state) * 1 / 25
         return loss
 
+    #@staticmethod
+    #def variance(z, gamma=1):
+    #    return F.relu(gamma - z.std(0)).mean()
+    
+    # What they used in EB-JEPA - generally just better for stability for unpleasent cases
     @staticmethod
-    def variance(z, gamma=1):
-        return F.relu(gamma - z.std(0)).mean()
+    def variance(z, gamma=1.0, eps=1e-4):
+        std = torch.sqrt(z.var(dim=0) + eps)
+        return F.relu(gamma - std).mean()
 
     @staticmethod
     def covariance(z):
@@ -344,7 +349,6 @@ class IJEPALoss(FMLoss):
         mu = z.mean(0)
         cov = torch.matmul((z - mu).t(), z - mu) / (n - 1)
         cov_loss = cov.masked_select(~torch.eye(d, dtype=torch.bool, device=z.device)).pow_(2).sum() / d
-
         return cov_loss
 
 
