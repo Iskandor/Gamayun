@@ -112,7 +112,7 @@ class PPOAtariFMLinearAgent(PPOAtariAgent):
             self._check_terminal_states(env, mode, done, next_state)
 
             next_state = self._encode_state(next_state)
-            next_state = self.state_average.process(next_state).clip_(-4., 4.)
+            # next_state = self.state_average.process(next_state).clip_(-4., 4.)
 
             #if mode == AgentMode.TRAINING:
             #    self.state_average.update(next_state)
