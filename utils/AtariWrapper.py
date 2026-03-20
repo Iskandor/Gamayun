@@ -235,6 +235,10 @@ class RawScoreEnv(gym.Wrapper):
 
 
 def WrapperAtari(env, height=96, width=96, frame_stacking=4, frame_skipping=4, reward_scale=1.0, dense_rewards=1.0):
+    ale = env.unwrapped.ale
+    ale.setFloat("repeat_action_probability", 0.0)
+    ale.setInt("frame_skip", 1) 
+    
     env = NopOpsEnv(env)
     env = FireResetEnv(env)
     env = MaxAndSkipEnv(env, frame_skipping)
@@ -246,6 +250,11 @@ def WrapperAtari(env, height=96, width=96, frame_stacking=4, frame_skipping=4, r
 
 def WrapperHardAtari(env_name, render_mode, height=96, width=96, frame_stacking=4, max_steps=4500):
     env = gym.make(env_name, render_mode=render_mode)
+    ale = env.unwrapped.ale
+    ale.setFloat("repeat_action_probability", 0.0)
+    ale.setInt("frame_skip", 1)
+
+
     env = StickyActionEnv(env)
     env = RepeatActionEnv(env)
     env = ResizeEnv(env, height, width, frame_stacking)
