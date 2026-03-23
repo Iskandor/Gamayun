@@ -1273,6 +1273,7 @@ class ConfigMontezumaFMSTDIM_128_feature_dim_4096(ConfigAtari):
         self.motivation_lr = 1e-4
         self.eta = 0.01
         self.forward_model_dim = 4096
+        self.temperature = 0.1
         self.type = 'st-dim_fm'
 
     def train(self, trial):
