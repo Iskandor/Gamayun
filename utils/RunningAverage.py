@@ -68,7 +68,7 @@ class RunningStats:
         self.max = torch.zeros(shape, device=device)
         self.sum = torch.zeros(shape, device=device)
         self.mean = torch.zeros(shape, device=device)
-        self.var = 0.01 * torch.ones(shape, device=device)
+        self.var = self.eps * torch.ones(shape, device=device)
         self.std = (self.var ** 0.5) + self.eps
 
     def update(self, x, reduction='mean'):
@@ -98,7 +98,7 @@ class RunningStats:
         self.max[i].fill_(0)
         self.sum[i].fill_(0)
         self.mean[i].fill_(0)
-        self.var[i].fill_(0.01)
+        self.var[i].fill_(self.eps)
         self.count[i] = 1
 
     # def reset(self, i):

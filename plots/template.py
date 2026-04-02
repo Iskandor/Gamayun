@@ -50,8 +50,14 @@ class ChartTemplates:
         self.templates[FWD].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates[FWD].add_element('score', ['sum'], 'blue', 'score')
         self.templates[FWD].add_element('ri', ['mean', 'std', 'max'], 'red', 'intrinsic reward')
-        self.templates[FWD].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
         self.templates[FWD].add_element('error', ['mean', 'std', 'max'], 'green', 'error')
+        self.templates[FWD].add_element('feature_space', ['mean', 'std'], 'green', 'feature space L2 norm')
+        self.templates[FWD].add_composite([('acc_encoder', 'darkgreen', 'inv gt accuracy '),
+                                          ('acc_forward_model', 'limegreen', 'inv accuracy')], ['mean'])
+        self.templates[FWD].add_element('acc_policy', ['mean', 'std', 'max'], 'green', 'policy accuracy')
+        self.templates[FWD].add_element('total_loss', ['mean'], 'magenta', 'total loss')
+        self.templates[FWD].add_element('loss', ['mean'], 'magenta', 'encoder loss')
+        self.templates[FWD].add_element('fwd_loss', ['mean'], 'magenta', 'fm loss')
 
         self.templates[IJEPA].add_element('re', ['sum'], 'blue', 'external reward')
         self.templates[IJEPA].add_element('score', ['sum'], 'blue', 'score')

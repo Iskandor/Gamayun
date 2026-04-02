@@ -1,3 +1,5 @@
+import datetime
+
 import torch
 import torch.nn.functional as F
 import torch.nn
@@ -96,6 +98,7 @@ class STDIMLoss(FMLoss):
         self.temperature = temperature
         self.projection1 = torch.nn.Linear(feature_size, local_layer_depth).to(device)
         self.projection2 = torch.nn.Linear(local_layer_depth, local_layer_depth).to(device)
+        self.local_layer_depth = local_layer_depth
         self.device = device
 
     def __call__(self, states, actions, next_states):
@@ -122,22 +125,16 @@ class STDIMLoss(FMLoss):
                                  acc_policy=acc_policy.unsqueeze(-1).detach().cpu())
         
         return total_loss
-    
+
     def global_local_loss(self, z_next_state, map_state):
         # Loss 1: Global at time t, f5 patches at time t-1
-        N = z_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
-        
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                positive.append(map_state[:, y, x, :].T)
-        
+        N = map_state.size(0)
+
         predictions = self.projection1(z_next_state)
         predictions = F.normalize(predictions, dim=1)
-        positive = torch.stack(positive)
+        positive = map_state.reshape(N, -1, self.local_layer_depth).permute(1, 2, 0)
         positive = F.normalize(positive, dim=1)
+
         logits = torch.matmul(predictions, positive) / self.temperature
         target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
         loss = F.cross_entropy(logits, target, reduction='mean')
@@ -146,23 +143,15 @@ class STDIMLoss(FMLoss):
 
     def local_local_loss(self, map_state, map_next_state):
         # Loss 2: f5 patches at time t, with f5 patches at time t-1
-        N = map_next_state.size(0)
-        sy = map_state.size(1)
-        sx = map_state.size(2)
+        N = map_state.size(0)
 
-        predictions = []
-        positive = []
-        for y in range(sy):
-            for x in range(sx):
-                predictions.append(self.projection2(map_next_state[:, y, x, :]))
-                positive.append(map_state[:, y, x, :].T)
-
-        predictions = torch.stack(predictions)
+        predictions = self.projection2(map_next_state)
+        predictions = predictions.view(N, -1, self.local_layer_depth).transpose(1, 0)
         predictions = F.normalize(predictions, dim=2)
-        positive = torch.stack(positive)
-        positive = F.normalize(positive, dim=1)
+        positives = map_state.reshape(N, -1, self.local_layer_depth).permute(1, 2, 0)
+        positives = F.normalize(positives, dim=1)
 
-        logits = torch.matmul(predictions, positive) / self.temperature
+        logits = torch.matmul(predictions, positives)  / self.temperature # (N, N, sy*sx)
         target = torch.arange(N).to(self.device).unsqueeze(0).repeat(logits.shape[0], 1)
         loss = F.cross_entropy(logits, target, reduction='mean')
 
