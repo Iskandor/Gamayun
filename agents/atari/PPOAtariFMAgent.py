@@ -55,8 +55,7 @@ class PPOAtariFMAgent(PPOAtariAgent):
             loss_class = STDIMLoss(model_class,
                                    model_class.ppo_encoder.feature_size,
                                    model_class.ppo_encoder.local_layer_depth,
-                                   config.device,
-                                   temperature=config.temperature)
+                                   config.device)
         elif _type == ArchitectureType.I_JEPA:
             model_class = PPOAtariIJEPANetwork(config, forward_model_type, hidden_model_type).to(config.device)
             loss_class = IJEPALoss(model_class, config.device, config.delta)

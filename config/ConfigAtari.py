@@ -1273,7 +1273,6 @@ class ConfigMontezumaFMSTDIM_128_feature_dim_4096(ConfigAtari):
         self.motivation_lr = 1e-4
         self.eta = 0.01
         self.forward_model_dim = 4096
-        self.temperature = 0.1
         self.type = 'st-dim_fm'
 
     def train(self, trial):
@@ -1388,3 +1387,143 @@ class ConfigMontezumaFMTrulyLinear2STDIM_128_feature_dim_1024(ConfigAtari):
 
         agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=4)
         agent.training_loop(self.env, name, trial)
+
+
+
+# GRAVITAR
+class ConfigGravitarFMSTDIM_32_feature_dim_512(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='GravitarNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 512
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModel)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigGravitarFMSTDIM_32_feature_dim_4096(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='GravitarNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 4096
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigGravitarFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='GravitarNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=3)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigGravitarFMTrulyLinearSTDIM_32_feature_dim_1024(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='GravitarNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=2)
+        agent.training_loop(self.env, name, trial)
+
+
+
+#PrivateEye
+class ConfigPrivateEyeFMSTDIM_32_feature_dim_512(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 512
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+        agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModel)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigPrivateEyeFMSTDIM_32_feature_dim_4096(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 4096
+        self.temperature = 0.1
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+        agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigPrivateEyeFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=3)
+        agent.training_loop(self.env, name, trial)
+
+class ConfigPrivateEyeFMTrulyLinearSTDIM_32_feature_dim_1024(ConfigAtari):
+    def __init__(self, num_threads, device, shift, path):
+        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
+                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         num_threads=num_threads, device=device, shift=shift, path=path)
+        self.motivation_lr = 1e-4
+        self.eta = 0.01
+        self.forward_model_dim = 1024
+        self.type = 'st-dim_fm'
+
+    def train(self, trial):
+        trial += self.shift
+        name = '{0:s}_{1:s}_{2:d}'.format(self.__class__.__name__, self.type, trial)
+        print(f"Starting training: {name}")
+        agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=2)
+        agent.training_loop(self.env, name, trial)
+
