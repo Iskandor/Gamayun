@@ -2,6 +2,7 @@ import os
 
 from plots import plot
 from plots.analytic_table import compute_table_values
+from plots.paths import data_root
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -61,12 +62,24 @@ def atari_env(plots=True, tables=True):
     config_crafter = [
         {'env': 'crafter', 'algorithm': 'ppo', 'model': 'baseline', 'id': 'v1', 'legend': 'Baseline v1'},
     ]
+
+    config_fm = [
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline', 'legend': 'FM-STDIM eps 0.1 T 0.1', 'path': data_root / '16' / 'fm_baseline'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline2', 'legend': 'FM-STDIM eps 0.01 T 0.1', 'path': data_root / '16' / 'fm_baseline2'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline3', 'legend': 'FM-STDIM eps 0.01 T 0.01', 'path': data_root / '16' / 'fm_baseline3'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline4', 'legend': 'FM-STDIM eps 0.01 T 1', 'path': data_root / '16' / 'fm_baseline4'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline5', 'legend': 'FM-STDIM eps 0.1 T 0.005', 'path': data_root / '16' / 'fm_baseline5'},
+        {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline6', 'legend': 'FM-STDIM eps 0.01 T 0.0001', 'path': data_root / '16' / 'fm_baseline6'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline7', 'legend': 'FM-STDIM eps 0.01 T 0.1 N 0.0001', 'path': data_root / '16' / 'fm_baseline7'},
+        # {'env': 'montezuma', 'algorithm': 'ppo', 'model': 'fm', 'id': 'baseline128', 'legend': 'FM-STDIM 0.1 128', 'path': data_root / 'fm128_baseline'},
+    ]
     # compute_table_values(config_sndv2, keys=['re'])
     # plot('montezuma_v5m', config, labels=['external reward', 'intrinsic reward', 'forward reward', 'forward space', 'forward target space'], keys=['re', 'ri', 'forward_reward', 'forward_space', 'target_space'], plot_details=['seer_asym_v5m4a2'], window=10000)
     # plot('montezuma_a2', config, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['sym_v1h1', 'sym_v1h2', 'sym_v1h3'], window=10000)
     # plot('montezuma_dpm', config_dpm, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['v3m2h16'], window=10000)
-    plot('crafter', config_crafter, labels=['external reward'], keys=['re'], plot_details=[], window=10000)
+    # plot('crafter', config_crafter, labels=['external reward'], keys=['re'], plot_details=[], window=10000)
     # plot('montezuma_sndv2', config_sndv2, labels=['external reward', 'score', 'intrinsic reward'], keys=['re', 'score', 'ri'], plot_details=['sndv2_v3m2'], window=10000)
+    plot('montezuma_fm', config_fm, labels=['external reward', 'score', 'intrinsic reward', 'feature space'], keys=['re', 'score', 'ri', 'feature_space'], plot_details=[], window=10000)
 
 
 def procgen_env(plots=True, tables=True):
