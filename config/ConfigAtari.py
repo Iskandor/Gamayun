@@ -1391,10 +1391,10 @@ class ConfigMontezumaFMTrulyLinear2STDIM_128_feature_dim_1024(ConfigAtari):
 
 
 # GRAVITAR
-class ConfigGravitarFMSTDIM_32_feature_dim_512(ConfigAtari):
+class ConfigGravitarFMSTDIM_128_feature_dim_512(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='GravitarNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1407,10 +1407,10 @@ class ConfigGravitarFMSTDIM_32_feature_dim_512(ConfigAtari):
         agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModel)
         agent.training_loop(self.env, name, trial)
 
-class ConfigGravitarFMSTDIM_32_feature_dim_4096(ConfigAtari):
+class ConfigGravitarFMSTDIM_128_feature_dim_4096(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='GravitarNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1423,10 +1423,10 @@ class ConfigGravitarFMSTDIM_32_feature_dim_4096(ConfigAtari):
         agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
         agent.training_loop(self.env, name, trial)
 
-class ConfigGravitarFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
+class ConfigGravitarFMLinearSTDIM_128_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='GravitarNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1439,10 +1439,10 @@ class ConfigGravitarFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP(
         agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=3)
         agent.training_loop(self.env, name, trial)
 
-class ConfigGravitarFMTrulyLinearSTDIM_32_feature_dim_1024(ConfigAtari):
+class ConfigGravitarFMTrulyLinearSTDIM_128_feature_dim_1024(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
         super().__init__(env_name='GravitarNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1456,12 +1456,11 @@ class ConfigGravitarFMTrulyLinearSTDIM_32_feature_dim_1024(ConfigAtari):
         agent.training_loop(self.env, name, trial)
 
 
-
-#PrivateEye
-class ConfigPrivateEyeFMSTDIM_32_feature_dim_512(ConfigAtari):
+#Venture
+class ConfigVentureFMSTDIM_128_feature_dim_512(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+        super().__init__(env_name='VentureNoFrameskip-v4',
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1475,10 +1474,11 @@ class ConfigPrivateEyeFMSTDIM_32_feature_dim_512(ConfigAtari):
         agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModel)
         agent.training_loop(self.env, name, trial)
 
-class ConfigPrivateEyeFMSTDIM_32_feature_dim_4096(ConfigAtari):
+
+class ConfigVentureFMSTDIM_128_feature_dim_4096(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+        super().__init__(env_name='VentureNoFrameskip-v4',
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1493,10 +1493,11 @@ class ConfigPrivateEyeFMSTDIM_32_feature_dim_4096(ConfigAtari):
         agent = PPOAtariFMAgent(self, _type=ArchitectureType.ST_DIM, forward_model_type=ForwardModelType.ForwardModelSkipConnection)
         agent.training_loop(self.env, name, trial)
 
-class ConfigPrivateEyeFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
+
+class ConfigVentureFMLinearSTDIM_128_feature_dim_1024_WithActionProjection_SKIP(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+        super().__init__(env_name='VentureNoFrameskip-v4',
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
@@ -1510,10 +1511,11 @@ class ConfigPrivateEyeFMLinearSTDIM_32_feature_dim_1024_WithActionProjection_SKI
         agent = PPOAtariFMLinearAgent(self, forward_model_type=ForwardModelType.ForwardModelSkipConnection, type=3)
         agent.training_loop(self.env, name, trial)
 
-class ConfigPrivateEyeFMTrulyLinearSTDIM_32_feature_dim_1024(ConfigAtari):
+
+class ConfigVentureFMTrulyLinearSTDIM_128_feature_dim_1024(ConfigAtari):
     def __init__(self, num_threads, device, shift, path):
-        super().__init__(env_name='PrivateEyeNoFrameskip-v4',
-                         steps=32, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
+        super().__init__(env_name='VentureNoFrameskip-v4',
+                         steps=128, lr=1e-4, n_env=128, gamma=[0.998, 0.99],
                          num_threads=num_threads, device=device, shift=shift, path=path)
         self.motivation_lr = 1e-4
         self.eta = 0.01
