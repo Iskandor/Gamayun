@@ -2,8 +2,6 @@ import argparse
 import math
 import os
 import platform
-
-import psutil
 import torch
 
 from experiment.ExperimentServer import ExperimentServer
